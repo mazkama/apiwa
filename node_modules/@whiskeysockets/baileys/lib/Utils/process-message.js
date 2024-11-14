@@ -150,7 +150,8 @@ const processMessage = async (message, { shouldProcessHistoryMsg, placeholderRes
                         ...data,
                         isLatest: histNotification.syncType !== WAProto_1.proto.HistorySync.HistorySyncType.ON_DEMAND
                             ? isLatest
-                            : undefined
+                            : undefined,
+                        peerDataRequestSessionId: histNotification.peerDataRequestSessionId
                     });
                 }
                 break;
@@ -199,6 +200,7 @@ const processMessage = async (message, { shouldProcessHistoryMsg, placeholderRes
                     const { peerDataOperationResult } = response;
                     for (const result of peerDataOperationResult) {
                         const { placeholderMessageResendResponse: retryResponse } = result;
+                        //eslint-disable-next-line max-depth
                         if (retryResponse) {
                             const webMessageInfo = WAProto_1.proto.WebMessageInfo.decode(retryResponse.webMessageInfoBytes);
                             // wait till another upsert event is available, don't want it to be part of the PDO response message

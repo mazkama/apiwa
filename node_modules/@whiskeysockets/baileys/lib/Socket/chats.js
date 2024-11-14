@@ -183,11 +183,19 @@ const makeChatsSocket = (config) => {
     };
     /** update the profile picture for yourself or a group */
     const updateProfilePicture = async (jid, content) => {
+        let targetJid;
+        if (!jid) {
+            throw new boom_1.Boom('Illegal no-jid profile update. Please specify either your ID or the ID of the chat you wish to update');
+        }
+        if ((0, WABinary_1.jidNormalizedUser)(jid) !== (0, WABinary_1.jidNormalizedUser)(authState.creds.me.id)) {
+            targetJid = (0, WABinary_1.jidNormalizedUser)(jid); // in case it is someone other than us
+        }
         const { img } = await (0, Utils_1.generateProfilePicture)(content);
         await query({
             tag: 'iq',
             attrs: {
-                to: (0, WABinary_1.jidNormalizedUser)(jid),
+                target: targetJid,
+                to: WABinary_1.S_WHATSAPP_NET,
                 type: 'set',
                 xmlns: 'w:profile:picture'
             },
@@ -202,10 +210,18 @@ const makeChatsSocket = (config) => {
     };
     /** remove the profile picture for yourself or a group */
     const removeProfilePicture = async (jid) => {
+        let targetJid;
+        if (!jid) {
+            throw new boom_1.Boom('Illegal no-jid profile update. Please specify either your ID or the ID of the chat you wish to update');
+        }
+        if ((0, WABinary_1.jidNormalizedUser)(jid) !== (0, WABinary_1.jidNormalizedUser)(authState.creds.me.id)) {
+            targetJid = (0, WABinary_1.jidNormalizedUser)(jid); // in case it is someone other than us
+        }
         await query({
             tag: 'iq',
             attrs: {
-                to: (0, WABinary_1.jidNormalizedUser)(jid),
+                target: targetJid,
+                to: WABinary_1.S_WHATSAPP_NET,
                 type: 'set',
                 xmlns: 'w:profile:picture'
             }
@@ -611,7 +627,7 @@ const makeChatsSocket = (config) => {
     };
     /** sending non-abt props may fix QR scan fail if server expects */
     const fetchProps = async () => {
-        var _a, _b;
+        var _a, _b, _c;
         const resultNode = await query({
             tag: 'iq',
             attrs: {
@@ -629,8 +645,10 @@ const makeChatsSocket = (config) => {
         const propsNode = (0, WABinary_1.getBinaryNodeChild)(resultNode, 'props');
         let props = {};
         if (propsNode) {
-            authState.creds.lastPropHash = (_b = propsNode === null || propsNode === void 0 ? void 0 : propsNode.attrs) === null || _b === void 0 ? void 0 : _b.hash;
-            ev.emit('creds.update', authState.creds);
+            if ((_b = propsNode.attrs) === null || _b === void 0 ? void 0 : _b.hash) { // on some clients, the hash is returning as undefined
+                authState.creds.lastPropHash = (_c = propsNode === null || propsNode === void 0 ? void 0 : propsNode.attrs) === null || _c === void 0 ? void 0 : _c.hash;
+                ev.emit('creds.update', authState.creds);
+            }
             props = (0, WABinary_1.reduceBinaryNodeToDictionary)(propsNode, 'prop');
         }
         logger.debug('fetched props');
@@ -653,6 +671,16 @@ const makeChatsSocket = (config) => {
             star: {
                 messages,
                 star
+            }
+        }, jid);
+    };
+    /**
+     * Adds label
+     */
+    const addLabel = (jid, labels) => {
+        return chatModify({
+            addLabel: {
+                ...labels
             }
         }, jid);
     };
@@ -803,14 +831,13 @@ const makeChatsSocket = (config) => {
             sendPresenceUpdate(markOnlineOnConnect ? 'available' : 'unavailable')
                 .catch(error => onUnexpectedError(error, 'presence update requests'));
         }
-        if (receivedPendingNotifications) {
-            // if we don't have the app state key
+        if (receivedPendingNotifications && // if we don't have the app state key
             // we keep buffering events until we finally have
             // the key and can sync the messages
-            if (!((_a = authState.creds) === null || _a === void 0 ? void 0 : _a.myAppStateKeyId) && !config.mobile) {
-                ev.buffer();
-                needToFlushWithAppStateSync = true;
-            }
+            // todo scrutinize
+            !((_a = authState.creds) === null || _a === void 0 ? void 0 : _a.myAppStateKeyId)) {
+            ev.buffer();
+            needToFlushWithAppStateSync = true;
         }
     });
     return {
@@ -842,6 +869,7 @@ const makeChatsSocket = (config) => {
         resyncAppState,
         chatModify,
         cleanDirtyBits,
+        addLabel,
         addChatLabel,
         removeChatLabel,
         addMessageLabel,

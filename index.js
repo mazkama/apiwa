@@ -16,13 +16,11 @@ const db = new sqlite3.Database('./commands.db', (err) => {
     if (err) {
         console.error("Error opening database:", err.message);
     } else {
-        db.run(`
-            CREATE TABLE IF NOT EXISTS bot_commands (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                command TEXT UNIQUE,
-                response TEXT
-            )
-        `);
+        db.run(`CREATE TABLE IF NOT EXISTS bot_commands (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            command TEXT UNIQUE,
+            response TEXT
+        )`);
         console.log("Database initialized.");
     }
 });
@@ -52,10 +50,18 @@ async function connectToWhatsApp() {
         if (!message.key.fromMe && message.message) {
             const sender = message.key.remoteJid;
             let text = message.message.conversation || "";
+            console.log("Message text:", text);  // Log isi pesan untuk debugging
 
             if (text.startsWith('/')) {
                 const [command, ...args] = text.trim().split(' ');
-                if (command === '/addcommand' && args.length >= 2) {
+                if (command === '/help') {
+                    const commands = [
+                        '/addcommand <command> <response> - Add a new command',
+                        '/delcommand <command> - Delete an existing command',
+                        '/command - List all available commands',
+                    ];
+                    await sock.sendMessage(sender, { text: commands.join('\n') });
+                } else if (command === '/addcommand' && args.length >= 2) {
                     const newCommand = args[0];
                     const response = args.slice(1).join(' ');
                     await addCommand(newCommand, response);
@@ -64,6 +70,14 @@ async function connectToWhatsApp() {
                     const commandToDelete = args[0];
                     await deleteCommand(commandToDelete);
                     await sock.sendMessage(sender, { text: `Command ${commandToDelete} deleted.` });
+                } else if (command === '/command') {
+                    // Menampilkan semua perintah yang ada di database
+                    const commandsList = await getAllCommands();
+                    if (commandsList.length > 0) {
+                        await sock.sendMessage(sender, { text: 'Available commands:\n' + commandsList.join('\n') });
+                    } else {
+                        await sock.sendMessage(sender, { text: 'No commands available.' });
+                    }
                 } else {
                     const foundCommand = await getCommandResponse(text);
                     if (foundCommand) {
@@ -122,6 +136,20 @@ function getCommandResponse(command) {
                 reject(err);
             } else {
                 resolve(row ? row.response : null);
+            }
+        });
+    });
+}
+
+// Fungsi untuk mendapatkan semua perintah yang ada di database
+function getAllCommands() {
+    return new Promise((resolve, reject) => {
+        db.all(`SELECT command FROM bot_commands`, [], (err, rows) => {
+            if (err) {
+                console.error('Error fetching commands:', err.message);
+                reject(err);
+            } else {
+                resolve(rows.map(row => row.command));
             }
         });
     });

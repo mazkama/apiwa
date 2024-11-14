@@ -1,4 +1,5 @@
 /// <reference types="node" />
+/// <reference types="node" />
 import { Boom } from '@hapi/boom';
 import { proto } from '../../WAProto';
 import { MessageReceiptType, MessageRelayOptions, SocketConfig, WAMessageKey } from '../Types';
@@ -8,7 +9,7 @@ export declare const makeMessagesRecvSocket: (config: SocketConfig) => {
     sendRetryRequest: (node: BinaryNode, forceIncludeKeys?: boolean) => Promise<void>;
     rejectCall: (callId: string, callFrom: string) => Promise<void>;
     fetchMessageHistory: (count: number, oldestMsgKey: WAMessageKey, oldestMsgTimestamp: number | Long) => Promise<string>;
-    requestPlaceholderResend: (messageKey: WAMessageKey) => Promise<'RESOLVED' | string | undefined>;
+    requestPlaceholderResend: (messageKey: WAMessageKey) => Promise<string | undefined>;
     getPrivacyTokens: (jids: string[]) => Promise<BinaryNode>;
     assertSessions: (jids: string[], force: boolean) => Promise<boolean>;
     relayMessage: (jid: string, message: proto.IMessage, { messageId: msgId, participant, additionalAttributes, additionalNodes, useUserDevicesCache, useCachedGroupMetadata, statusJidList }: MessageRelayOptions) => Promise<string>;
@@ -94,6 +95,7 @@ export declare const makeMessagesRecvSocket: (config: SocketConfig) => {
     resyncAppState: (collections: readonly ("critical_block" | "critical_unblock_low" | "regular_high" | "regular_low" | "regular")[], isInitialSync: boolean) => Promise<void>;
     chatModify: (mod: import("../Types").ChatModification, jid: string) => Promise<void>;
     cleanDirtyBits: (type: "account_sync" | "groups", fromTimestamp?: string | number | undefined) => Promise<void>;
+    addLabel: (jid: string, labels: import("../Types/Label").LabelActionBody) => Promise<void>;
     addChatLabel: (jid: string, labelId: string) => Promise<void>;
     removeChatLabel: (jid: string, labelId: string) => Promise<void>;
     addMessageLabel: (jid: string, messageId: string, labelId: string) => Promise<void>;
@@ -103,7 +105,7 @@ export declare const makeMessagesRecvSocket: (config: SocketConfig) => {
         fromMe?: boolean | undefined;
     }[], star: boolean) => Promise<void>;
     type: "md";
-    ws: any;
+    ws: import("./Client").WebSocketClient;
     ev: import("../Types").BaileysEventEmitter & {
         process(handler: (events: Partial<import("../Types").BaileysEventMap>) => void | Promise<void>): () => void;
         buffer(): void;
