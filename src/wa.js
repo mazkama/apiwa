@@ -56,14 +56,27 @@ class WAManager extends EventEmitter {
                 
                 if (statusCode === 401 || statusCode === 403 || statusCode === 405) {
                     console.log('Session invalid, removing auth info and restarting...');
-                    this.logout(authPath);
+                    this.logout(); // Call logout without authPath, it handles it internally
                 } else if (shouldReconnect) {
                     setTimeout(() => {
                         console.log('Mencoba menyambungkan kembali...');
                         this.connect();
                     }, 5000);
                 } else {
-                    this.setStatus('DISCONNECTED');
+                    // Jika dilogout (misal lewat HP atau perintah API)
+                    this.status = 'DISCONNECTED';
+                    const authPath = path.join(__dirname, '../auth_info_baileys');
+                    
+                    setTimeout(() => {
+                        try {
+                            if (fs.existsSync(authPath)) {
+                                fs.rmSync(authPath, { recursive: true, force: true });
+                            }
+                        } catch (e) {
+                            console.error('Gagal menghapus cache kredensial (Mungkin File masih di-Lock Windows):', e.message);
+                        }
+                        this.connect(); // Memaksa agar membuat sesi QR baru jika Logout penuh dengan aman
+                    }, 2500); // 2.5 Detik jeda agar Baileys melepas seluruh lock LevelDB
                 }
             } else if (connection === 'open') {
                 console.log('Opened connection');
