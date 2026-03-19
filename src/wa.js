@@ -81,27 +81,52 @@ class WAManager extends EventEmitter {
             if (!msg.message || msg.key.fromMe) return;
 
             try {
-                const webhookUrl = await db.getWebhookUrl();
-                // Jika Webhook valid / sudah diset di Dashboard
-                if (webhookUrl && webhookUrl.startsWith('http')) {
-                    const text = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
-                    const senderNumber = msg.key.remoteJid.split('@')[0];
-                    const pushName = msg.pushName || "Unknown";
-                    
-                    const payload = {
-                        number: senderNumber,
-                        name: pushName,
-                        message: text,
-                        timestamp: msg.messageTimestamp,
-                        messageId: msg.key.id
-                    };
-                    
-                    fetch(webhookUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    }).catch(e => console.error("Webhook Error:", e.message));
+                // Full Enterprise Webhook Extraction
+                let messageType = Object.keys(msg.message)[0];
+                if (messageType === 'senderKeyDistributionMessage') {
+                    messageType = Object.keys(msg.message)[1] || messageType; // Bypass signal distribution keys
                 }
+                
+                // Cerdas mengekstrak teks asli atau caption dari media
+                let messageText = '';
+                if (msg.message.conversation) messageText = msg.message.conversation;
+                else if (msg.message.extendedTextMessage?.text) messageText = msg.message.extendedTextMessage.text;
+                else if (msg.message.imageMessage?.caption) messageText = msg.message.imageMessage.caption;
+                else if (msg.message.videoMessage?.caption) messageText = msg.message.videoMessage.caption;
+                
+                let messageTitle = msg.message.documentMessage?.title || msg.message.documentMessage?.fileName || '';
+
+                const sender = msg.key.remoteJid.split('@')[0];
+                const participant = msg.key.participant ? msg.key.participant.split('@')[0] : sender;
+                const isGroup = msg.key.remoteJid.endsWith('@g.us');
+                const pushName = msg.pushName || 'Unknown Contact';
+
+                db.getWebhookUrl().then(webhookUrl => {
+                    if (webhookUrl) {
+                        const payload = {
+                            event: 'message.received',
+                            data: {
+                                id: msg.key.id,
+                                from: sender,
+                                participant: participant,
+                                pushName: pushName,
+                                isGroup: isGroup,
+                                type: messageType.replace('Message', ''),
+                                text: messageText || messageTitle,
+                                timestamp: msg.messageTimestamp,
+                                device: msg.key.id.length > 21 ? 'Android' : 'iOS/Web',
+                                // Sertakan metadata murni bagi Developer tingkat lanjut (mengunduh PDF/Gambar)
+                                rawContext: msg.message
+                            }
+                        };
+
+                        fetch(webhookUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        }).catch(e => console.error('Webhook payload bounced:', e.message));
+                    }
+                }).catch(e => console.error('Failed retrieving webhook URL:', e));
             } catch (err) {
                 console.error("Error pada Event Listener Webhook API:", err);
             }

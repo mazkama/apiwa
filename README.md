@@ -25,8 +25,9 @@ A self-hosted, scalable, and professional WhatsApp API Gateway built on top of *
 - **Send Image (URL & Base64)**: Send images via public URLs or auto-decode long *Base64 String payloads* to reconstruct media files on-the-fly.
 - **Send Document**: Send digital documents (PDFs, Word files, ZIPs) with full filename customization.
 
-### 4. 🪝 Inbound Webhook API (Real-Time Callback)
-- **Instant HTTP POST Transfer**: Whenever a customer replies, the Node.js engine instantly packages the data (`Sender Number, Sender Profile Name, Message Body, Timestamp`) and fires it to your external Company Backend (PHP/Laravel/Python/etc) via a JSON Webhook POST payload.
+### 4. 🪝 Advanced Inbound Webhook API (Real-Time Callback)
+- **Instant HTTP POST Transfer**: Whenever a message is received, the Node.js engine instantly packages the data and fires it to your external Company Backend via an Enterprise JSON Webhook POST payload.
+- **Deep Meta Inspection**: Features Native Message Type detection (`type`: text, image, document), Android/iOS grouping (`device`), and a complete delivery of `rawContext` Baileys buffer for advanced parsing.
 - Perfect for building **Auto-Reply Customer Service**, Billing Validations, or **ChatGPT-powered AI Bots**.
 
 ### 5. ⏳ Smart Delay Queue (Anti-Banned Rate Limiter)
@@ -84,12 +85,12 @@ npm start
 
 ---
 
-## 📚 API Documentation & Postman
+## 📚 API Playground & Postman
 
-APIWA's detailed developer documentation is available directly through the Dashboard UI once deployed. Click the **API Docs** button to view endpoints and webhook schemas.
-👉 `http://localhost:3000/docs.html`
+APIWA's detailed developer documentation is available directly through the Dashboard UI! Once deployed, just click the **API Playground** tab to view endpoints, body schemas, and perform Live Simulation requests without moving to a different window.
+👉 `http://localhost:3000`
 
-We also provide a ready-to-use **Postman Collection** with Native Bearer Authentication enabled. Simply click "Download Postman Collection" from the docs page and import it into your Postman client. Don't forget to fill in your API Key inside the Collection Variables tab!
+We also provide a ready-to-use **Postman Collection** with Native Bearer Authentication enabled. Simply click "Postman Pack" from the playground page and import it into your Postman client. Don't forget to configure your API Key inside the Collection Variables tab!
 
 ---
 *Built for maximum stability, high execution speed, and unparalleled architectural cleanliness.* 🛡️
