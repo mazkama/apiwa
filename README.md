@@ -10,8 +10,9 @@ A self-hosted, scalable, and professional WhatsApp API Gateway built on top of *
 - **Clean & Modular Architecture**: Complex logic is neatly organized into specific, maintainable modules (`server.js`, `wa.js`, `queue.js`, `db.js`).
 - **Persistent SQLite Storage**: API Keys and Webhook URLs are safely stored in a local SQLite database, ensuring your vital configurations persist seamlessly across server restarts.
 
-### 2. 💻 Minimalist Web Dashboard
-- **Secure Control Panel**: An elegant, password-protected browser interface secured by encrypted Session Cookies.
+### 2. 💻 Minimal Tailwind CSS Web Dashboard
+- **Interactive API Tester (Playground)**: Features an integrated testing UI with auto-filled mock payloads! You can simulate live HTTP requests (Text, Image, PDF) directly from your browser sidebar to your core WA engine and catch real-time JSON responses.
+- **Secure Control Panel**: An elegant, responsive, and password-protected Single Page Application (SPA) built using pure Tailwind CSS and secured by encrypted Session Cookies.
 - **Real-Time Status Monitor**: Visual indicators (Connecting, Waiting for QR, Connected) that update live.
 - **Built-in QR Scanner**: Pair your WhatsApp account (Linked Devices) by scanning the QR code directly from the web UI.
 - **API Credentials Manager**: Features a "1-Click Generate New Key" button to instantly rotate and revoke your secret API Token.
