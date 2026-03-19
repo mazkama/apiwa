@@ -5,8 +5,29 @@ const cookieParser = require('cookie-parser');
 const waManager = require('./wa');
 const db = require('./db');
 const apiRouter = require('./api');
+const http = require('http');
+const { Server } = require('socket.io');
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+
+// Broadcast WA Status to all connected Dashboard users via WebSocket
+waManager.on('statusUpdate', (status) => {
+    io.emit('statusUpdate', { 
+        status: status, 
+        qrCode: waManager.qrCode 
+    });
+});
+
+io.on('connection', (socket) => {
+    // Kirim status awal saat user baru saja membuka Dashboard
+    socket.emit('statusUpdate', { 
+        status: waManager.status, 
+        qrCode: waManager.qrCode 
+    });
+});
+
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
@@ -166,7 +187,7 @@ app.post('/api/set-webhook', async (req, res) => {
 });
 
 function startServer(port = process.env.PORT || 3000) {
-    app.listen(port, () => {
+    server.listen(port, () => {
         console.log(`Server API & Web Dashboard is running on http://localhost:${port}`);
     });
 }
