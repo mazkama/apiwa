@@ -1,8 +1,7 @@
 const makeWASocket = require('@whiskeysockets/baileys').default;
-const { DisconnectReason } = require('@whiskeysockets/baileys');
+const { DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const { Boom } = require('@hapi/boom');
-const { useMultiFileAuthState } = require('@whiskeysockets/baileys');
-const qrcode = require('qrcode-terminal');
+// const qrcode = require('qrcode-terminal'); // Sudah tidak diperlukan, kita pakai bawaan Baileys
 const sqlite3 = require('sqlite3').verbose();
 const express = require('express');
 
@@ -27,18 +26,27 @@ const db = new sqlite3.Database('./commands.db', (err) => {
 
 async function connectToWhatsApp() {
     const { state, saveCreds } = await useMultiFileAuthState('./auth_info.json');
-    sock = makeWASocket({ auth: state, printQRInTerminal: false });
+    const { version, isLatest } = await fetchLatestBaileysVersion();
+    console.log(`Using WA v${version.join('.')}, isLatest: ${isLatest}`);
+
+    sock = makeWASocket({ 
+        version,
+        auth: state, 
+        printQRInTerminal: true,
+        browser: ['Mac OS', 'Chrome', '10.15.7'] // Mengganti identitas browser untuk menghindari blokir
+    });
 
     sock.ev.on('connection.update', (update) => {
-        const { connection, qr, lastDisconnect } = update;
-        if (qr) {
-            qrcode.generate(qr, { small: true });
-        }
+        const { connection, lastDisconnect } = update;
         if (connection === 'close') {
             const shouldReconnect = (lastDisconnect.error instanceof Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
             console.log('Connection closed due to', lastDisconnect.error, ', reconnecting', shouldReconnect);
             if (shouldReconnect) {
-                connectToWhatsApp();
+                // Tambahkan delay 5 detik sebelum reconnect agar tidak diblokir sementara oleh WA karena spam server
+                setTimeout(() => {
+                    console.log('Mencoba menyambungkan kembali...');
+                    connectToWhatsApp();
+                }, 5000);
             }
         } else if (connection === 'open') {
             console.log('Opened connection');
@@ -154,6 +162,15 @@ function getAllCommands() {
         });
     });
 }
+
+// Handler global agar aplikasi tidak mati mendadak jika ada error dari koneksi internal websocket
+process.on('uncaughtException', function (err) {
+    console.error('Terdapat error yang tidak tertangani (Uncaught Exception): ', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection (Promise) di:', promise, 'alasan:', reason);
+});
 
 connectToWhatsApp();
 app.listen(3000, () => {

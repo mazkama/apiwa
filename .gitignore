@@ -1,0 +1,6 @@
+node_modules/
+auth_info.json/
+commands.db
+.env
+.DS_Store
+*.log
