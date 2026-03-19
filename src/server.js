@@ -83,6 +83,7 @@ app.post('/api/login', (req, res) => {
 app.get('/api/status', (req, res) => {
     res.json({
         status: waManager.status,
+        qrCode: waManager.qrCode
     });
 });
 

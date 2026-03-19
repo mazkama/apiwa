@@ -2,6 +2,7 @@ const makeWASocket = require('@whiskeysockets/baileys').default;
 const { DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const { Boom } = require('@hapi/boom');
 const fs = require('fs');
+const path = require('path');
 const EventEmitter = require('events');
 const QueueManager = require('./queue');
 const db = require('./db');
@@ -11,7 +12,8 @@ class WAManager extends EventEmitter {
         super();
         this.sock = null;
         this.qrCode = null;
-        this.status = 'DISCONNECTED'; // DISCONNECTED, CONNECTING, WAITING_QR, CONNECTED
+        this.setStatus('DISCONNECTED'); // DISCONNECTED, CONNECTING, WAITING_QR, CONNECTED
+        this.qrCode = null;
         
         // Inisialisasi Queue Limiter dengan Jeda Protektif 3 Detik (3000 ms)
         this.messageQueue = new QueueManager(async (task) => {
@@ -27,7 +29,7 @@ class WAManager extends EventEmitter {
 
     async connect() {
         this.setStatus('CONNECTING');
-        const authPath = './auth_info.json';
+        const authPath = path.join(__dirname, '../auth_info_baileys');
         const { state, saveCreds } = await useMultiFileAuthState(authPath);
         const { version, isLatest } = await fetchLatestBaileysVersion();
         
@@ -46,6 +48,8 @@ class WAManager extends EventEmitter {
             if (qr) {
                 this.qrCode = qr;
                 this.setStatus('WAITING_QR');
+            } else {
+                // Jangan hapus qrCode di sini, agar tetap tampil jika belum discan
             }
 
             if (connection === 'close') {
@@ -64,7 +68,8 @@ class WAManager extends EventEmitter {
                     }, 5000);
                 } else {
                     // Jika dilogout (misal lewat HP atau perintah API)
-                    this.status = 'DISCONNECTED';
+                    this.qrCode = null;
+                    this.setStatus('DISCONNECTED');
                     const authPath = path.join(__dirname, '../auth_info_baileys');
                     
                     setTimeout(() => {
@@ -146,15 +151,20 @@ class WAManager extends EventEmitter {
         });
     }
 
-    logout(authPathStr) {
+    logout() {
         this.setStatus('DISCONNECTED');
-        const authPath = authPathStr || './auth_info.json';
+        const authPath = path.join(__dirname, '../auth_info_baileys');
         if (fs.existsSync(authPath)) {
-            fs.rmSync(authPath, { recursive: true, force: true });
+            try {
+                fs.rmSync(authPath, { recursive: true, force: true });
+            } catch (e) {
+                console.error('Logout: Gagal menghapus folder sesi:', e.message);
+            }
         }
+        this.qrCode = null;
         setTimeout(() => {
             this.connect();
-        }, 2000);
+        }, 2500);
     }
     
     // --- GATEWAY API METHODS ---
