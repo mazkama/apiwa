@@ -1,6 +1,7 @@
 node_modules/
 auth_info.json/
-commands.db
+*.db
 .env
 .DS_Store
 *.log
+err.json

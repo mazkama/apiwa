@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APIWA Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --surface-color: #ffffff;
+            --border-color: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            
+            /* Status Colors */
+            --success-bg: #dcfce7;
+            --success-text: #166534;
+            --success-icon: #22c55e;
+            
+            --warning-bg: #fef9c3;
+            --warning-text: #854d0e;
+            --warning-icon: #eab308;
+            
+            --error-bg: #fee2e2;
+            --error-text: #991b1b;
+            --error-icon: #ef4444;
+            
+            --neutral-bg: #f1f5f9;
+            --neutral-text: #475569;
+            --neutral-icon: #94a3b8;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dashboard-card {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 48px 40px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.05);
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .header {
+            margin-bottom: 32px;
+        }
+
+        .header h1 {
+            margin: 0 0 8px 0;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 15px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 16px;
+            border-radius: 999px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 36px;
+            transition: all 0.3s ease;
+            background: var(--neutral-bg);
+            color: var(--neutral-text);
+        }
+
+        .status-badge::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+            background: var(--neutral-icon);
+        }
+
+        .status-badge.status-connected { background: var(--success-bg); color: var(--success-text); }
+        .status-badge.status-connected::before { background: var(--success-icon); }
+        
+        .status-badge.status-waiting { background: var(--warning-bg); color: var(--warning-text); }
+        .status-badge.status-waiting::before { background: var(--warning-icon); animation: blink 1.5s infinite; }
+        
+        .status-badge.status-disconnected { background: var(--error-bg); color: var(--error-text); }
+        .status-badge.status-disconnected::before { background: var(--error-icon); }
+
+        @keyframes blink {
+            50% { opacity: 0.4; }
+        }
+
+        .qr-container {
+            width: 260px;
+            height: 260px;
+            background: white;
+            border-radius: 20px;
+            padding: 16px;
+            margin: 0 auto 36px auto;
+            display: none;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 0 0 1px var(--border-color);
+            animation: fadeIn 0.4s ease-out;
+            box-sizing: border-box;
+        }
+
+        .qr-container.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .qr-container img {
+            max-width: 100%;
+            border-radius: 8px;
+            display: block;
+        }
+
+        .qr-placeholder {
+            width: 260px;
+            height: 260px;
+            border-radius: 20px;
+            margin: 0 auto 36px auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: var(--neutral-bg);
+            border: 2px dashed #cbd5e1;
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+            box-sizing: border-box;
+        }
+
+        .qr-placeholder svg {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 16px;
+            color: #94a3b8;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .btn-group {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        button {
+            width: 100%;
+            background: #f1f5f9;
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 14px 24px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            background: #e2e8f0;
+        }
+
+        button.danger {
+            background: white;
+            color: var(--error-text);
+            border-color: #fca5a5;
+        }
+
+        button.danger:hover {
+            background: var(--error-bg);
+            border-color: #f87171;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid #cbd5e1;
+            border-radius: 50%;
+            border-top-color: var(--text-secondary);
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-card">
+        <div class="header">
+            <h1>WaBot Control Panel</h1>
+            <p>Manage your WhatsApp connection</p>
+        </div>
+
+        <div id="statusBadge" class="status-badge">
+            Connecting...
+        </div>
+
+        <div id="qrArea" class="qr-container">
+            <img id="qrImage" src="" alt="WhatsApp QR Code">
+        </div>
+
+        <div id="placeholderArea" class="qr-placeholder">
+            <svg fill="none" class="icon" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+            <span id="placeholderText">Waiting for session data...</span>
+            <div id="loadingSpinner" class="spinner" style="margin-top: 16px;"></div>
+        </div>
+
+        <div class="btn-group">
+            <button id="logoutBtn" class="danger">Reset WA Connection</button>
+            <button id="systemLogoutBtn">Log Out</button>
+        </div>
+
+        <hr style="width: 100%; border: none; border-top: 1px solid var(--border-color); margin: 32px 0;">
+        
+        <div style="width: 100%; text-align: left;">
+            <h3 style="margin-top: 0; margin-bottom: 12px; font-size: 16px; color: var(--text-primary);">Pengaturan Integrasi (Gateway)</h3>
+            
+            <p style="margin-top: 0; margin-bottom: 8px; font-size: 13px; color: var(--text-secondary);"><strong>1. API Key (Outbound)</strong><br>Kunci otorisasi pengiriman pada parameter Header <code>x-api-key</code>.</p>
+            <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                <input type="text" id="apiKeyInput" readonly value="Loading..." style="flex: 1; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--neutral-bg); color: var(--text-primary); font-size: 13px; font-family: monospace;">
+                <button id="copyBtn" style="width: auto; padding: 10px 16px; font-size: 13px; border-radius: 8px;">Copy</button>
+            </div>
+            <div style="display: flex; gap: 12px; margin-bottom: 24px;">
+                <button id="generateKeyBtn" style="font-size: 14px; border-radius: 8px; padding: 12px 16px;">Generate New Key</button>
+                <button id="docsBtn" style="background: white; color: var(--text-primary); border: 1px solid var(--border-color); font-size: 14px; border-radius: 8px; padding: 12px 16px;" onclick="window.location.href='/docs.html'">API Docs</button>
+            </div>
+
+            <p style="margin-top: 0; margin-bottom: 8px; font-size: 13px; color: var(--text-secondary);"><strong>2. Webhook URL (Inbound)</strong><br>Pesan WA masuk akan dikirim (HTTP POST) ke link aplikasi Anda ini secara *Real-Time*.</p>
+            <div style="display: flex; gap: 8px;">
+                <input type="text" id="webhookInput" placeholder="Kosongkan untuk Matikan -> e.g. https://domain.com/webhook" style="flex: 1; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--neutral-bg); color: var(--text-primary); font-size: 13px; font-family: monospace;">
+                <button id="saveWebhookBtn" style="background: var(--accent-primary); width: auto; padding: 10px 16px; font-size: 13px; border-radius: 8px;">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const statusBadge = document.getElementById('statusBadge');
+        const qrArea = document.getElementById('qrArea');
+        const qrImage = document.getElementById('qrImage');
+        const placeholderArea = document.getElementById('placeholderArea');
+        const placeholderText = document.getElementById('placeholderText');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const systemLogoutBtn = document.getElementById('systemLogoutBtn');
+
+        let currentStatus = '';
+
+        async function fetchStatus() {
+            try {
+                const response = await fetch('/api/status');
+                if (response.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
+                const data = await response.json();
+                updateUI(data.status);
+            } catch (err) {
+                console.error('Failed to fetch status', err);
+                statusBadge.className = 'status-badge status-disconnected';
+                statusBadge.innerText = 'Server Offline';
+            }
+        }
+
+        async function fetchQR() {
+            try {
+                const response = await fetch('/api/qr');
+                const data = await response.json();
+                if (data.success && data.qrcode) {
+                    qrImage.src = data.qrcode;
+                }
+            } catch (err) {
+                console.error('Failed to fetch QR', err);
+            }
+        }
+
+        function updateUI(status) {
+            if (status === currentStatus && status !== 'WAITING_QR') return;
+            currentStatus = status;
+
+            statusBadge.className = 'status-badge'; // reset
+            
+            if (status === 'CONNECTED') {
+                statusBadge.classList.add('status-connected');
+                statusBadge.innerText = 'WhatsApp Connected';
+                qrArea.classList.remove('active');
+                placeholderArea.style.display = 'flex';
+                placeholderText.innerText = 'Authentication Active. Bot is running.';
+                loadingSpinner.style.display = 'none';
+                placeholderArea.querySelector('svg').style.display = 'block';
+                placeholderArea.style.borderColor = '#86efac';
+            } 
+            else if (status === 'WAITING_QR') {
+                statusBadge.classList.add('status-waiting');
+                statusBadge.innerText = 'Scan QR Code';
+                qrArea.classList.add('active');
+                placeholderArea.style.display = 'none';
+                fetchQR(); // Fetch the latest QR code
+            } 
+            else if (status === 'CONNECTING') {
+                statusBadge.classList.add('status-waiting');
+                statusBadge.innerText = 'Starting WhatsApp...';
+                qrArea.classList.remove('active');
+                placeholderArea.style.display = 'flex';
+                placeholderText.innerText = 'Initializing connection...';
+                loadingSpinner.style.display = 'block';
+                placeholderArea.querySelector('svg').style.display = 'none';
+                placeholderArea.style.borderColor = 'var(--border-color)';
+            }
+            else {
+                statusBadge.classList.add('status-disconnected');
+                statusBadge.innerText = 'Disconnected';
+                qrArea.classList.remove('active');
+                placeholderArea.style.display = 'flex';
+                placeholderText.innerText = 'Bot is offline or disconnected.';
+                loadingSpinner.style.display = 'none';
+                placeholderArea.querySelector('svg').style.display = 'block';
+                placeholderArea.style.borderColor = 'var(--border-color)';
+            }
+        }
+
+        logoutBtn.addEventListener('click', async () => {
+            if(!confirm('Are you sure you want to reset the WhatsApp connection? This forces a new QR scan.')) return;
+            
+            logoutBtn.disabled = true;
+            logoutBtn.innerText = 'Resetting...';
+            
+            try {
+                await fetch('/api/logout', { method: 'POST' });
+                alert('WhatsApp session reset. Please wait for the new QR code.');
+            } catch (err) {
+                alert('Failed to reset session');
+            } finally {
+                logoutBtn.disabled = false;
+                logoutBtn.innerText = 'Reset WA Connection';
+            }
+        });
+
+        systemLogoutBtn.addEventListener('click', async () => {
+            try {
+                await fetch('/api/logout-dashboard', { method: 'POST' });
+                window.location.href = '/login';
+            } catch (e) {
+                console.error(e);
+            }
+        });
+
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const copyBtn = document.getElementById('copyBtn');
+        const generateKeyBtn = document.getElementById('generateKeyBtn');
+        const webhookInput = document.getElementById('webhookInput');
+        const saveWebhookBtn = document.getElementById('saveWebhookBtn');
+
+        async function fetchApiKey() {
+            try {
+                const res = await fetch('/api/get-key');
+                const data = await res.json();
+                if (data.success) {
+                    apiKeyInput.value = data.key;
+                }
+            } catch (err) {
+                apiKeyInput.value = 'Failed to load';
+            }
+        }
+
+        async function fetchWebhook() {
+            try {
+                const res = await fetch('/api/get-webhook');
+                const data = await res.json();
+                if (data.success) {
+                    webhookInput.value = data.url;
+                }
+            } catch (err) {
+                console.error('Failed to load webhook URL');
+            }
+        }
+
+        saveWebhookBtn.addEventListener('click', async () => {
+            const originalText = saveWebhookBtn.innerText;
+            saveWebhookBtn.innerText = 'Wait...';
+            try {
+                const res = await fetch('/api/set-webhook', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: webhookInput.value })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    saveWebhookBtn.innerText = 'Saved!';
+                    saveWebhookBtn.style.background = '#10b981';
+                } else {
+                    saveWebhookBtn.innerText = 'Error';
+                }
+            } catch (e) {
+                saveWebhookBtn.innerText = 'Error';
+            }
+            setTimeout(() => {
+                saveWebhookBtn.innerText = originalText;
+                saveWebhookBtn.style.background = 'var(--accent-primary)';
+            }, 2000);
+        });
+
+        generateKeyBtn.addEventListener('click', async () => {
+            if(!confirm('Are you sure you want to generate a new API Key? All applications using the old key will be denied access.')) return;
+            generateKeyBtn.innerText = 'Generating...';
+            try {
+                const res = await fetch('/api/generate-key', { method: 'POST' });
+                const data = await res.json();
+                if(data.success) {
+                    apiKeyInput.value = data.key;
+                    alert('New API Key generated successfully!');
+                }
+            } catch(e) {
+                alert('Failed to generate key');
+            } finally {
+                generateKeyBtn.innerText = 'Generate New Key';
+            }
+        });
+
+        copyBtn.addEventListener('click', () => {
+            apiKeyInput.select();
+            document.execCommand('copy');
+            copyBtn.innerText = 'Copied!';
+            setTimeout(() => copyBtn.innerText = 'Copy', 2000);
+        });
+
+        // Polling every 2.5 seconds
+        setInterval(() => {
+            fetchStatus();
+        }, 2500);
+
+        // Initial fetch
+        fetchStatus();
+        fetchApiKey();
+        fetchWebhook();
+    </script>
+</body>
+</html>

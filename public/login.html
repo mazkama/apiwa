@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WaBot Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --surface-color: #ffffff;
+            --border-color: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --accent-primary: #0ea5e9;
+            --accent-hover: #0284c7;
+            --error-bg: #fee2e2;
+            --error-text: #ef4444;
+            --error-border: #fca5a5;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-card {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 48px 40px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.05);
+            box-sizing: border-box;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+
+        .header h1 {
+            margin: 0 0 8px 0;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 14px 16px;
+            background: #f1f5f9;
+            border: 1px solid transparent;
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 15px;
+            font-family: inherit;
+            box-sizing: border-box;
+            transition: all 0.2s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            background: #ffffff;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1);
+        }
+
+        .form-group input::placeholder {
+            color: #94a3b8;
+        }
+
+        button {
+            width: 100%;
+            background: var(--text-primary);
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 8px;
+        }
+
+        button:hover {
+            background: #334155;
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px -8px rgba(15, 23, 42, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .error-message {
+            color: var(--error-text);
+            background: var(--error-bg);
+            border: 1px solid var(--error-border);
+            padding: 14px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            font-size: 14px;
+            font-weight: 500;
+            display: none;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="header">
+            <h1>WaBot Panel</h1>
+            <p>Sign in to manage your session</p>
+        </div>
+
+        <div id="errorMsg" class="error-message">Invalid Username or Password</div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" placeholder="Enter username" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Enter password" required>
+            </div>
+
+            <button type="submit" id="submitBtn">Sign In</button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('errorMsg');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            errorMsg.style.display = 'none';
+            submitBtn.innerText = 'Signing in...';
+            submitBtn.disabled = true;
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    window.location.href = '/';
+                } else {
+                    errorMsg.innerText = data.error || 'Login failed';
+                    errorMsg.style.display = 'block';
+                }
+            } catch (err) {
+                errorMsg.innerText = 'Server error. Please try again.';
+                errorMsg.style.display = 'block';
+            } finally {
+                submitBtn.innerText = 'Sign In';
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

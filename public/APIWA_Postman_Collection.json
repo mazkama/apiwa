@@ -1,0 +1,159 @@
+{
+  "info": {
+    "name": "APIWA Gateway",
+    "description": "WhatsApp Gateway API Collection for integrating Baileys with external Node/PHP/Python systems.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{api_key}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "1. Send Text Message",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"number\": \"08123456789\",\n  \"message\": \"Halo! Ini notifikasi teks dari APIWA Gateway.\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/send-message",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "send-message"
+          ]
+        }
+      }
+    },
+    {
+      "name": "2. Send Image (URL)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"number\": \"628123456789\",\n  \"image_url\": \"https://images.unsplash.com/photo-1541963463532-d68292c34b19\",\n  \"caption\": \"Caption gambar indah APIWA Gateway\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/send-image",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "send-image"
+          ]
+        }
+      }
+    },
+    {
+      "name": "3. Send Image (Base64)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"number\": \"628123456789\",\n  \"image_url\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==\",\n  \"caption\": \"Satu titik Red Pixel rahasia dikirim via Base64\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/send-image",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "send-image"
+          ]
+        }
+      }
+    },
+    {
+      "name": "4. Send Document (PDF/Docx)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"number\": \"628123456789\",\n  \"document_url\": \"https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf\",\n  \"filename\": \"Kwitansi-Dummy.pdf\",\n  \"mimetype\": \"application/pdf\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/send-document",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "send-document"
+          ]
+        }
+      }
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "api_key",
+      "value": "MASUKAN_API_KEY_ANDA_DISINI",
+      "type": "string"
+    }
+  ]
+}

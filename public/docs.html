@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Documentation - APIWA Gateway</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --surface-color: #ffffff;
+            --border-color: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --accent-primary: #0ea5e9;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+            margin: 0;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--surface-color);
+            padding: 40px 48px;
+            border-radius: 24px;
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.05);
+            border: 1px solid var(--border-color);
+        }
+
+        h1 { font-size: 32px; margin-top: 0; margin-bottom: 8px; }
+        h2 { font-size: 20px; color: var(--accent-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-top: 40px; }
+        h3 { font-size: 16px; margin-bottom: 8px; }
+        p { color: var(--text-secondary); }
+
+        .endpoint {
+            background: #f1f5f9;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border-color);
+        }
+
+        .method {
+            display: inline-block;
+            background: #10b981;
+            color: white;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-right: 12px;
+        }
+
+        .url {
+            font-family: monospace;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+        }
+
+        .table th, .table td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 14px;
+        }
+
+        .table th { background: #f8fafc; color: var(--text-secondary); font-weight: 600; }
+
+        pre {
+            background: #0f172a;
+            color: #f8fafc;
+            padding: 16px;
+            border-radius: 12px;
+            overflow-x: auto;
+            font-size: 14px;
+        }
+        
+        .badge {
+            background: #e2e8f0;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        a.back {
+            display: inline-block;
+            margin-bottom: 24px;
+            color: var(--accent-primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        a.back:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+            <a href="/" class="back" style="margin-bottom: 0;">← Back to Dashboard</a>
+            <a href="/APIWA_Postman_Collection.json" download class="btn-download" style="background: var(--text-primary); color: white; padding: 10px 16px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s;">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                Download Postman Collection
+            </a>
+        </div>
+        <h1>Developer API Reference</h1>
+        <p>Gunakan endpoint ini untuk mengintegrasikan pengiriman WhatsApp ke sistem Anda (PHP, Python, Laravel, dll).</p>
+
+        <div class="endpoint">
+            <h3>🔐 Authentication</h3>
+            <p>Semua API Endpoint bersifat privat. Anda harus menyertakan header berikut di setiap request HTTP (Bisa pilih salah satu cara yang paling familiar):</p>
+            <pre>x-api-key: YOUR_API_KEY_HERE
+atau
+Authorization: Bearer YOUR_API_KEY_HERE</pre>
+            <p style="font-size: 13px;">Dapatkan string token rahasia ini di menu utama Dashboard.</p>
+        </div>
+
+        <h2>1. Send Text Message</h2>
+        <div class="endpoint">
+            <div><span class="method">POST</span><span class="url">/api/v1/send-message</span></div>
+        </div>
+        <p>Mengirim pesan teks biasa ke WhatsApp target.</p>
+        <table class="table">
+            <tr><th>Parameter (JSON)</th><th>Type</th><th>Description</th></tr>
+            <tr><td><code>number</code></td><td>String</td><td>Nomor tujuan (Contoh: 08123456789 atau 628123456789)</td></tr>
+            <tr><td><code>message</code></td><td>String</td><td>Isi pesan teks yang ingin dikirim</td></tr>
+        </table>
+        <pre>{
+    "number": "08123456789",
+    "message": "Halo! Ini notifikasi sistem."
+}</pre>
+
+        <h2>2. Send Image</h2>
+        <div class="endpoint">
+            <div><span class="method">POST</span><span class="url">/api/v1/send-image</span></div>
+        </div>
+        <p>Mengirim gambar dan pesan caption (Opsional).</p>
+        <table class="table">
+            <tr><th>Parameter (JSON)</th><th>Type</th><th>Description</th></tr>
+            <tr><td><code>number</code></td><td>String</td><td>Nomor WA tujuan</td></tr>
+            <tr><td><code>image_url</code></td><td>String</td><td>URL dari gambar (contoh: https://domain.com/gambar.jpg)</td></tr>
+            <tr><td><code>caption</code></td><td>String</td><td>(Opsional) Teks bawaan gambar</td></tr>
+        </table>
+        <pre>{
+    "number": "628123456789",
+    "image_url": "https://images.unsplash.com/photo-1541963463532-d68292c34b19",
+    "caption": "Silakan lihat brosur terlampir."
+}</pre>
+
+        <h2>3. Send Document / File</h2>
+        <div class="endpoint">
+            <div><span class="method">POST</span><span class="url">/api/v1/send-document</span></div>
+        </div>
+        <p>Mengirim file dokumen seperti PDF, Word, atau zip.</p>
+        <table class="table">
+            <tr><th>Parameter (JSON)</th><th>Type</th><th>Description</th></tr>
+            <tr><td><code>number</code></td><td>String</td><td>Nomor surat tujuan</td></tr>
+            <tr><td><code>document_url</code></td><td>String</td><td>URL dari dokumen PDF/Word yang bisa diakes publik</td></tr>
+            <tr><td><code>filename</code></td><td>String</td><td>(Opsional) Nama yang akan tampil pada WhatsApp. Default: Document</td></tr>
+            <tr><td><code>mimetype</code></td><td>String</td><td>(Opsional) Default: application/pdf</td></tr>
+        </table>
+        <pre>{
+    "number": "628123456789",
+    "document_url": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+    "filename": "Kwitansi-2026.pdf",
+    "mimetype": "application/pdf"
+}</pre>
+
+        <h2>Contoh Penggunaan cURL CLI</h2>
+        <pre>curl -X POST "http://localhost:3000/api/v1/send-message" \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer wa_d41d8cd98f00b204..." \
+-d '{"number":"08123456789", "message":"Halo dari APIWA!"}'</pre>
+        
+        <h2>⚡ Webhook / Inbound Messages (Callback)</h2>
+        <div class="endpoint">
+            <div><span class="method" style="background:var(--accent-primary);">INBOUND POST</span><span class="url">Diterima oleh Aplikasi Internal Anda</span></div>
+        </div>
+        <p>Pendaftaran <b>Webhook URL</b> dapat dilakukan 1 <i>click</i> melalui <i>Dashboard Web</i>. Jika Anda mengisinya, APIWA Gateway akan otomatis mengirimkan data HTTP POST <i>(Real-Time)</i> setiap ada kiriman pesan WhatsApp masuk ke nomor bot Anda.</p>
+        <p>Struktur File JSON Webhook (Callback Payload) yang akan di-<i>post</i> secara asinkron ke URL Anda:</p>
+        <pre>{
+    "number": "628994044810",
+    "name": "Alan Alan",
+    "message": "Halo kak, pesanan 001 kapan dikirim?",
+    "timestamp": 1729384821,
+    "messageId": "3EB04DXX..."
+}</pre>
+        <p style="font-size: 13px;">Gunakan informasi <i>payload</i> ini pada direktori server PHP / Laravel Anda untuk menyimpan ke Database Kasir, atau dibalas balik menggunakan Endpoint `send-message` (Auto-Reply 2 Arah).</p>
+
+    </div>
+</body>
+</html>
