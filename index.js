@@ -2,14 +2,14 @@ require('dotenv').config();
 const waManager = require('./src/wa');
 const { startServer } = require('./src/server');
 
-// Handler global agar aplikasi tidak mati mendadak jika ada error ringan
-process.on('uncaughtException', function (err) {
-    console.error('Uncaught Exception: ', err);
-    // Jika port bentrok (mencegah bot jalan dobel), matikan paksa!
+// Error Handling Global
+process.on('uncaughtException', (err) => {
     if (err.code === 'EADDRINUSE') {
-        console.error('\nBENTROK: Port 3000 sudah dipakai! Mematikan bot ganda...\n');
+        const crashedPort = process.env.PORT || 3000;
+        console.error(`\nBENTROK: Port ${crashedPort} sudah dipakai! Mematikan bot ganda...\n`);
         process.exit(1);
     }
+    console.error('Unhandled Exception:', err);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
