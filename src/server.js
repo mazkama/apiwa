@@ -81,6 +81,10 @@ app.post('/api/login', (req, res) => {
 
 // Endpoint: Dapatkan Status Koneksi Bot
 app.get('/api/status', (req, res) => {
+    // Log ringan untuk proses penelusuran (debug)
+    if (waManager.status !== 'CONNECTED') {
+        console.log(`[Status Check] Engine: ${waManager.status} | QR: ${waManager.qrCode ? 'Generated' : 'Waiting...'}`);
+    }
     res.json({
         status: waManager.status,
         qrCode: waManager.qrCode
@@ -92,11 +96,18 @@ app.get('/api/qr', async (req, res) => {
     if (waManager.status === 'WAITING_QR' && waManager.qrCode) {
         try {
             const qrDataURL = await QRCode.toDataURL(waManager.qrCode);
-            res.json({ success: true, qrcode: qrDataURL });
+            // Send the image data directly
+            const img = Buffer.from(qrDataURL.split(',')[1], 'base64');
+            res.writeHead(200, {
+                'Content-Type': 'image/png',
+                'Content-Length': img.length
+            });
+            res.end(img);
         } catch (err) {
             res.status(500).json({ success: false, error: 'Failed to generate QR Code image' });
         }
     } else {
+        // Return a placeholder or error image if QR is not available
         res.status(400).json({ success: false, error: 'QR Code is not available or bot is already connected' });
     }
 });

@@ -325,8 +325,10 @@
                 } else if (data.status === 'WAITING_QR' && data.qrCode) {
                     badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-orange-500"></span> <span class="text-orange-700">Awaiting QR Scan</span>`;
                     badge.className = "px-4 py-1.5 rounded-full text-sm font-semibold bg-orange-50 border border-orange-100 gap-2 flex items-center";
-                    qrContainer.innerHTML = '<div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200"><canvas id="qrcodeCanvas"></canvas></div><p class="mt-4 text-sm text-slate-500 font-medium tracking-wide">Scan via WhatsApp > Linked Devices</p>';
-                    QRCode.toCanvas(document.getElementById('qrcodeCanvas'), data.qrCode, { width: 220, margin: 1, color: { dark: '#0f172a', light: '#ffffff' } });
+                    // Tampilkan gambar QR langsung dari API server agar lebih kompatibel dan bebas error JS
+                    qrContainer.innerHTML = `<div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                        <img src="/api/qr?t=${Date.now()}" class="w-[220px] h-[220px]" alt="Scan QR">
+                    </div><p class="mt-4 text-sm text-slate-500 font-medium tracking-wide">Scan via WhatsApp > Linked Devices</p>`;
                 } else if (data.status === 'CONNECTING') {
                     badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> <span class="text-blue-700">Pairing...</span>`;
                     badge.className = "px-4 py-1.5 rounded-full text-sm font-semibold bg-blue-50 border border-blue-100 gap-2 flex items-center";
