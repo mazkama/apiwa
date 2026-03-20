@@ -1,5 +1,5 @@
 const makeWASocket = require('@whiskeysockets/baileys').default;
-const { DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
+const { DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion, jidNormalizedUser } = require('@whiskeysockets/baileys');
 const { Boom } = require('@hapi/boom');
 const fs = require('fs');
 const path = require('path');
@@ -114,8 +114,8 @@ class WAManager extends EventEmitter {
                 
                 let messageTitle = msg.message.documentMessage?.title || msg.message.documentMessage?.fileName || '';
 
-                const sender = msg.key.remoteJid.split('@')[0];
-                const participant = msg.key.participant ? msg.key.participant.split('@')[0] : sender;
+                const sender = jidNormalizedUser(msg.key.remoteJid).split('@')[0];
+                const participant = msg.key.participant ? jidNormalizedUser(msg.key.participant).split('@')[0] : sender;
                 const isGroup = msg.key.remoteJid.endsWith('@g.us');
                 const pushName = msg.pushName || 'Unknown Contact';
 
