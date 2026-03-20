@@ -1,11 +1,12 @@
 const makeWASocket = require('@whiskeysockets/baileys').default;
-const { DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion, jidNormalizedUser } = require('@whiskeysockets/baileys');
+const { DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const { Boom } = require('@hapi/boom');
 const fs = require('fs');
 const path = require('path');
 const EventEmitter = require('events');
 const QueueManager = require('./queue');
 const db = require('./db');
+const { updateLidMapping, normalizeJid, getUserId, isLid } = require('./jid-utils');
 
 class WAManager extends EventEmitter {
     constructor() {
@@ -92,6 +93,22 @@ class WAManager extends EventEmitter {
 
         this.sock.ev.on('creds.update', saveCreds);
 
+        // LID mapping: contacts.update carries {id (phone JID), lid} pairs during contact sync.
+        // This populates the in-memory LID→JID store used by normalizeJid().
+        this.sock.ev.on('contacts.update', (updates) => {
+            const mappings = [];
+            for (const c of updates) {
+                if (c.id && c.lid) mappings.push({ jid: c.id, lid: c.lid });
+            }
+            if (mappings.length > 0) updateLidMapping(mappings);
+        });
+
+        // lid-mapping.update is a dedicated Baileys event for LID resolution
+        // (available in newer Baileys versions; safe no-op if not emitted)
+        this.sock.ev.on('lid-mapping.update', (mappings) => {
+            updateLidMapping(mappings);
+        });
+
         // Listener untuk Pesan Masuk (Webhook Inbound)
         this.sock.ev.on('messages.upsert', async (m) => {
             const msg = m.messages[0];
@@ -114,9 +131,20 @@ class WAManager extends EventEmitter {
                 
                 let messageTitle = msg.message.documentMessage?.title || msg.message.documentMessage?.fileName || '';
 
-                const sender = jidNormalizedUser(msg.key.remoteJid).split('@')[0];
-                const participant = msg.key.participant ? jidNormalizedUser(msg.key.participant).split('@')[0] : sender;
                 const isGroup = msg.key.remoteJid.endsWith('@g.us');
+
+                // Normalize the conversation JID for the 'from' field:
+                //   DM messages  → resolves to sender's phone number (or LID fallback)
+                //   Group messages → returns the group JID unchanged (groups are not LID-affected)
+                const normalizedRemoteJid = normalizeJid(msg.key.remoteJid);
+                const sender = normalizedRemoteJid.split('@')[0];
+
+                // Get the actual message sender (handles LID resolution and remoteJidAlt fallback):
+                //   DM messages    → same as sender above
+                //   Group messages → resolves msg.key.participant (may be a LID)
+                const senderInfo = getUserId(msg);
+                const participant = senderInfo.id;
+                const isLidBased = senderInfo.isLidBased;
                 const pushName = msg.pushName || 'Unknown Contact';
 
                 db.getWebhookUrl().then(webhookUrl => {
@@ -129,6 +157,7 @@ class WAManager extends EventEmitter {
                                 participant: participant,
                                 pushName: pushName,
                                 isGroup: isGroup,
+                                isLidBased: isLidBased,
                                 type: messageType.replace('Message', ''),
                                 text: messageText || messageTitle,
                                 timestamp: msg.messageTimestamp,
