@@ -196,13 +196,27 @@ class WAManager extends EventEmitter {
         }, 2500);
     }
     
-    // --- GATEWAY API METHODS ---
-
     /**
-     * Format number to WhatsApp JID format
+     * Format number or LID to WhatsApp JID format
      */
-    formatPhone(phone) {
-        let number = phone.toString().replace(/[^0-9]/g, '');
+    formatRecipient(id, type = 'number') {
+        if (typeof id !== 'string') id = id.toString();
+        
+        // If already a JID, return as is
+        if (id.endsWith('@s.whatsapp.net') || id.endsWith('@lid') || id.endsWith('@g.us')) {
+            return id;
+        }
+
+        // Clean identifier (only alphanumeric for LID/Phone)
+        let identifier = id.replace(/[^0-9a-zA-Z]/g, '');
+
+        if (type === 'lid' || isLid(id)) {
+            if (!identifier.endsWith('@lid')) identifier = identifier + '@lid';
+            return identifier;
+        }
+
+        // Default to standard phone number processing
+        let number = id.replace(/[^0-9]/g, '');
         if (number.startsWith('0')) {
             number = '62' + number.slice(1);
         }
@@ -221,9 +235,9 @@ class WAManager extends EventEmitter {
         return { url: input };
     }
 
-    async sendText(to, text) {
+    async sendText(to, text, type = 'number') {
         if (!this.sock || this.status !== 'CONNECTED') throw new Error('WhatsApp is not connected');
-        const number = this.formatPhone(to);
+        const number = this.formatRecipient(to, type);
         
         // API tidak ditahan (Fire-And-Forget), biar diproses background
         this.messageQueue.add({ number, payload: { text: text } })
@@ -232,9 +246,9 @@ class WAManager extends EventEmitter {
         return { status: 'queued', number: number, detail: 'Message added to rate-limiter queue' };
     }
 
-    async sendImage(to, imageUrl, caption = '') {
+    async sendImage(to, imageUrl, caption = '', type = 'number') {
         if (!this.sock || this.status !== 'CONNECTED') throw new Error('WhatsApp is not connected');
-        const number = this.formatPhone(to);
+        const number = this.formatRecipient(to, type);
         const mediaConfig = this.getMediaContent(imageUrl);
         
         this.messageQueue.add({ number, payload: { image: mediaConfig, caption: caption } })
@@ -243,9 +257,9 @@ class WAManager extends EventEmitter {
         return { status: 'queued', number: number, detail: 'Image added to rate-limiter queue' };
     }
 
-    async sendDocument(to, documentUrl, fileName, mimetype = 'application/pdf') {
+    async sendDocument(to, documentUrl, fileName, mimetype = 'application/pdf', type = 'number') {
         if (!this.sock || this.status !== 'CONNECTED') throw new Error('WhatsApp is not connected');
-        const number = this.formatPhone(to);
+        const number = this.formatRecipient(to, type);
         const mediaConfig = this.getMediaContent(documentUrl);
         
         this.messageQueue.add({ number, payload: { document: mediaConfig, mimetype: mimetype, fileName: fileName } })

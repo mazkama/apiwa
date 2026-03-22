@@ -31,12 +31,12 @@ async function requireApiKey(req, res, next) {
 // 1. Endpoint: Mengirim Pesan Teks
 router.post('/send-message', requireApiKey, async (req, res) => {
     try {
-        const { number, message } = req.body;
+        const { number, message, type } = req.body;
         if (!number || !message) {
             return res.status(400).json({ success: false, error: 'Missing number or message parameter' });
         }
         
-        const result = await waManager.sendText(number, message);
+        const result = await waManager.sendText(number, message, type || 'number');
         res.json({ success: true, message: 'Message sent successfully', result });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
@@ -46,12 +46,12 @@ router.post('/send-message', requireApiKey, async (req, res) => {
 // 2. Endpoint: Mengirim Pesan Gambar (Image)
 router.post('/send-image', requireApiKey, async (req, res) => {
     try {
-        const { number, image_url, caption } = req.body;
+        const { number, image_url, caption, type } = req.body;
         if (!number || !image_url) {
             return res.status(400).json({ success: false, error: 'Missing number or image_url parameter' });
         }
         
-        const result = await waManager.sendImage(number, image_url, caption || '');
+        const result = await waManager.sendImage(number, image_url, caption || '', type || 'number');
         res.json({ success: true, message: 'Image sent successfully', result });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
@@ -61,7 +61,7 @@ router.post('/send-image', requireApiKey, async (req, res) => {
 // 3. Endpoint: Mengirim Dokumen/Berkas (PDF, DOCX, ZIP)
 router.post('/send-document', requireApiKey, async (req, res) => {
     try {
-        const { number, document_url, filename, mimetype } = req.body;
+        const { number, document_url, filename, mimetype, type } = req.body;
         if (!number || !document_url) {
             return res.status(400).json({ success: false, error: 'Missing number or document_url parameter' });
         }
@@ -69,7 +69,7 @@ router.post('/send-document', requireApiKey, async (req, res) => {
         const mime = mimetype || 'application/pdf';
         const name = filename || 'Document';
         
-        const result = await waManager.sendDocument(number, document_url, name, mime);
+        const result = await waManager.sendDocument(number, document_url, name, mime, type || 'number');
         res.json({ success: true, message: 'Document sent successfully', result });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });

@@ -20,14 +20,16 @@ A self-hosted, scalable, and professional WhatsApp API Gateway built on top of *
 
 ### 3. 🚀 Outbound REST API (Message Broadcasting)
 *All `/api/v1/...` endpoints are strictly protected by standard `x-api-key` or `Authorization: Bearer` HTTP Headers.*
-- **Auto-Formatting Engine**: The core engine will automatically scrub and convert local numbers (e.g., `0812...` or `62812...`) to Meta's strict JID standard (`62812...@s.whatsapp.net`).
+- **Dual-Identifier Formatting Engine**: The core engine automatically handles both standard **Phone Numbers** and WhatsApp **LIDs (Linked IDs)**.
+  - **Phone Numbers**: Automatically scrubs and converts local formats (e.g., `0812...` or `62812...`) to Meta's strict JID standard (`62812...@s.whatsapp.net`).
+  - **LIDs (Linked IDs)**: Supports new Android-based LIDs (e.g., `708...`) by passing an optional `type: "lid"` parameter in the request body.
 - **Send Text**: Seamlessly broadcast standard string notifications.
 - **Send Image (URL & Base64)**: Send images via public URLs or auto-decode long *Base64 String payloads* to reconstruct media files on-the-fly.
 - **Send Document**: Send digital documents (PDFs, Word files, ZIPs) with full filename customization.
 
 ### 4. 🪝 Advanced Inbound Webhook API (Real-Time Callback)
 - **Instant HTTP POST Transfer**: Whenever a message is received, the Node.js engine instantly packages the data and fires it to your external Company Backend via an Enterprise JSON Webhook POST payload.
-- **Deep Meta Inspection**: Features Native Message Type detection (`type`: text, image, document), Android/iOS grouping (`device`), and a complete delivery of `rawContext` Baileys buffer for advanced parsing.
+- **Deep Meta Inspection**: Features Native Message Type detection (`type`: text, image, document), Android/iOS grouping (`device`), LID identification (`isLidBased`), and a complete delivery of `rawContext` Baileys buffer for advanced parsing.
 - Perfect for building **Auto-Reply Customer Service**, Billing Validations, or **ChatGPT-powered AI Bots**.
 
 ### 5. ⏳ Smart Delay Queue (Anti-Banned Rate Limiter)
