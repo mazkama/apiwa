@@ -198,8 +198,9 @@ class WAManager extends EventEmitter {
     
     /**
      * Format number or LID to WhatsApp JID format
+     * Supports auto-detection based on numeric patterns
      */
-    formatRecipient(id, type = 'number') {
+    formatRecipient(id, type = null) {
         if (typeof id !== 'string') id = id.toString();
         
         // If already a JID, return as is
@@ -210,7 +211,10 @@ class WAManager extends EventEmitter {
         // Clean identifier (only alphanumeric for LID/Phone)
         let identifier = id.replace(/[^0-9a-zA-Z]/g, '');
 
-        if (type === 'lid' || isLid(id)) {
+        // AUTO DETECTION: LIDs are usually 14-digit numeric identifiers starting with '7'
+        const isLikelyLid = (identifier.length >= 14 && identifier.startsWith('7'));
+        
+        if (type === 'lid' || isLid(id) || (type !== 'number' && isLikelyLid)) {
             if (!identifier.endsWith('@lid')) identifier = identifier + '@lid';
             return identifier;
         }
@@ -235,7 +239,7 @@ class WAManager extends EventEmitter {
         return { url: input };
     }
 
-    async sendText(to, text, type = 'number') {
+    async sendText(to, text, type = null) {
         if (!this.sock || this.status !== 'CONNECTED') throw new Error('WhatsApp is not connected');
         const number = this.formatRecipient(to, type);
         
@@ -246,7 +250,7 @@ class WAManager extends EventEmitter {
         return { status: 'queued', number: number, detail: 'Message added to rate-limiter queue' };
     }
 
-    async sendImage(to, imageUrl, caption = '', type = 'number') {
+    async sendImage(to, imageUrl, caption = '', type = null) {
         if (!this.sock || this.status !== 'CONNECTED') throw new Error('WhatsApp is not connected');
         const number = this.formatRecipient(to, type);
         const mediaConfig = this.getMediaContent(imageUrl);
@@ -257,7 +261,7 @@ class WAManager extends EventEmitter {
         return { status: 'queued', number: number, detail: 'Image added to rate-limiter queue' };
     }
 
-    async sendDocument(to, documentUrl, fileName, mimetype = 'application/pdf', type = 'number') {
+    async sendDocument(to, documentUrl, fileName, mimetype = 'application/pdf', type = null) {
         if (!this.sock || this.status !== 'CONNECTED') throw new Error('WhatsApp is not connected');
         const number = this.formatRecipient(to, type);
         const mediaConfig = this.getMediaContent(documentUrl);

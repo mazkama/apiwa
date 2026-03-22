@@ -21,8 +21,8 @@ A self-hosted, scalable, and professional WhatsApp API Gateway built on top of *
 ### 3. 🚀 Outbound REST API (Message Broadcasting)
 *All `/api/v1/...` endpoints are strictly protected by standard `x-api-key` or `Authorization: Bearer` HTTP Headers.*
 - **Dual-Identifier Formatting Engine**: The core engine automatically handles both standard **Phone Numbers** and WhatsApp **LIDs (Linked IDs)**.
-  - **Phone Numbers**: Automatically scrubs and converts local formats (e.g., `0812...` or `62812...`) to Meta's strict JID standard (`62812...@s.whatsapp.net`).
-  - **LIDs (Linked IDs)**: Supports new Android-based LIDs (e.g., `708...`) by passing an optional `type: "lid"` parameter in the request body.
+  - **Phone Numbers**: Automatically converts local formats (e.g., `0812...` or `62812...`) to Meta's strict JID standard (`62812...@s.whatsapp.net`).
+  - **LIDs (Linked IDs)**: Automatically detects new Android-based LIDs (starting with `7` and 14+ digits) and formats them as `@lid`. An optional `type: "lid"` can still be passed for manual override.
 - **Send Text**: Seamlessly broadcast standard string notifications.
 - **Send Image (URL & Base64)**: Send images via public URLs or auto-decode long *Base64 String payloads* to reconstruct media files on-the-fly.
 - **Send Document**: Send digital documents (PDFs, Word files, ZIPs) with full filename customization.
