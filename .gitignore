@@ -1,5 +1,6 @@
 node_modules/
 auth_info.json/
+auth_info_baileys/
 *.db
 .env
 .DS_Store
