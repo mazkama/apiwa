@@ -8,7 +8,7 @@ A self-hosted, scalable, and professional WhatsApp API Gateway built on top of *
 ### 1. 🛡️ Production-Ready Security & Architecture
 - **Environment Variables (`.env`)**: Core configurations are strongly encapsulated safely outside the source code, making the app highly secure and ready for Cloud VPS hosting.
 - **Clean & Modular Architecture**: Complex logic is neatly organized into specific, maintainable modules (`server.js`, `wa.js`, `queue.js`, `db.js`).
-- **Persistent SQLite Storage**: API Keys and Webhook URLs are safely stored in a local SQLite database, ensuring your vital configurations persist seamlessly across server restarts.
+- **Persistent SQLite Storage**: API Keys, Webhook URLs, and **WhatsApp LID-to-Phone mappings** are safely stored in a local SQLite database, ensuring your vital configurations and contact mappings persist seamlessly across server restarts.
 
 ### 2. 💻 Minimal Tailwind CSS Web Dashboard
 - **Interactive API Tester (Playground)**: Features an integrated testing UI with auto-filled mock payloads! You can simulate live HTTP requests (Text, Image, PDF) directly from your browser sidebar to your core WA engine and catch real-time JSON responses.
@@ -29,12 +29,17 @@ A self-hosted, scalable, and professional WhatsApp API Gateway built on top of *
 
 ### 4. 🪝 Advanced Inbound Webhook API (Real-Time Callback)
 - **Instant HTTP POST Transfer**: Whenever a message is received, the Node.js engine instantly packages the data and fires it to your external Company Backend via an Enterprise JSON Webhook POST payload.
-- **Deep Meta Inspection**: Features Native Message Type detection (`type`: text, image, document), Android/iOS grouping (`device`), LID identification (`isLidBased`), and a complete delivery of `rawContext` Baileys buffer for advanced parsing.
+- **Deep Meta Inspection**: Features Native Message Type detection (`type`: text, image, document), Android/iOS grouping (`device`), LID identification (`isLidBased`), **standard phone number extraction (`phone`)**, and a complete delivery of `rawContext` Baileys buffer for advanced parsing.
 - Perfect for building **Auto-Reply Customer Service**, Billing Validations, or **ChatGPT-powered AI Bots**.
 
 ### 5. ⏳ Smart Delay Queue (Anti-Banned Rate Limiter)
 - **Fire-And-Forget Architecture**: Blast 1,000 promotional messages concurrently via Postman/PHP, and APIWA instantly responds with `{"status": "queued"}` without freezing your application's loading screen.
 - **Background Interval Limiter**: APIWA buffers queued messages and trickles them out to Meta's servers at a highly disciplined rate of **1 Message every 3 Seconds**. This acts as an umbrella to protect your Company Number from being flagged as Spam.
+
+### 6. 🔄 Automatic WhatsApp LID-to-Phone Mapping Engine
+- **Protocol Mismatch Resolution**: Automatically runs on `@whiskeysockets/baileys@6.7.23` (legacy stable branch) to avoid `init queries Timed Out` issues and stay fully compatible with WhatsApp's latest secure handshake protocols.
+- **Transparent Mapping Resolution**: Seamlessly listens to WhatsApp's initial history sync (`contacts.set`, `messaging-history.set`) and captures real-time message metadata (`senderPn`, `remoteJidAlt`) to resolve LIDs (Linked IDs, e.g., `70850149654769@lid`) to their respective phone JIDs.
+- **SQLite Persistence**: Automatically stores and retrieves these mappings in a local SQLite table (`lid_phone_map`), making sure they survive server restarts and consistently populate the `phone` field in your inbound Webhooks.
 
 ---
 
