@@ -10,6 +10,11 @@ const db = new sqlite3.Database('./gateway.db', (err) => {
             key TEXT PRIMARY KEY,
             value TEXT
         )`);
+        db.run(`CREATE TABLE IF NOT EXISTS lid_phone_map (
+            lid TEXT PRIMARY KEY,
+            jid TEXT,
+            updated_at INTEGER
+        )`);
         console.log("Database initialized.");
     }
 });
@@ -77,9 +82,44 @@ function setWebhookUrl(url) {
     });
 }
 
+function saveLidMapping(lid, jid) {
+    return new Promise((resolve, reject) => {
+        const now = Date.now();
+        db.run(
+            `INSERT INTO lid_phone_map (lid, jid, updated_at) VALUES (?, ?, ?)
+             ON CONFLICT(lid) DO UPDATE SET jid = ?, updated_at = ?`,
+            [lid, jid, now, jid, now],
+            (err) => {
+                if (err) {
+                    console.error('Error saving LID mapping:', err.message);
+                    reject(err);
+                } else {
+                    resolve({ lid, jid });
+                }
+            }
+        );
+    });
+}
+
+function loadAllLidMappings() {
+    return new Promise((resolve, reject) => {
+        db.all(`SELECT lid, jid FROM lid_phone_map`, (err, rows) => {
+            if (err) {
+                console.error('Error loading LID mappings:', err.message);
+                reject(err);
+            } else {
+                resolve(rows || []);
+            }
+        });
+    });
+}
+
 module.exports = {
     getApiKey,
     generateApiKey,
     getWebhookUrl,
-    setWebhookUrl
+    setWebhookUrl,
+    saveLidMapping,
+    loadAllLidMappings
 };
+

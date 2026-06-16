@@ -6,7 +6,7 @@ const path = require('path');
 const EventEmitter = require('events');
 const QueueManager = require('./queue');
 const db = require('./db');
-const { updateLidMapping, normalizeJid, getUserId, isLid } = require('./jid-utils');
+const { updateLidMapping, normalizeJid, getUserId, isLid, loadLidMappingsFromDB } = require('./jid-utils');
 
 class WAManager extends EventEmitter {
     constructor() {
@@ -30,6 +30,10 @@ class WAManager extends EventEmitter {
 
     async connect() {
         this.setStatus('CONNECTING');
+        
+        // Memuat seluruh mapping LID dari SQLite sebelum socket terhubung
+        await loadLidMappingsFromDB();
+
         const authPath = path.join(__dirname, '../auth_info_baileys');
         const { state, saveCreds } = await useMultiFileAuthState(authPath);
         const { version, isLatest } = await fetchLatestBaileysVersion();
@@ -42,6 +46,7 @@ class WAManager extends EventEmitter {
             printQRInTerminal: true,
             browser: ['Mac OS', 'Chrome', '10.15.7']
         });
+
 
         this.sock.ev.on('connection.update', (update) => {
             const { connection, lastDisconnect, qr } = update;
@@ -103,11 +108,47 @@ class WAManager extends EventEmitter {
             if (mappings.length > 0) updateLidMapping(mappings);
         });
 
+        // contacts.upsert carries initial contacts sync which has LID information
+        this.sock.ev.on('contacts.upsert', (contacts) => {
+            const mappings = [];
+            for (const c of contacts) {
+                if (c.id && c.lid) mappings.push({ jid: c.id, lid: c.lid });
+            }
+            if (mappings.length > 0) updateLidMapping(mappings);
+        });
+
+        // contacts.set carries the initial bulk contacts sync
+        this.sock.ev.on('contacts.set', ({ contacts }) => {
+            const mappings = [];
+            for (const c of contacts) {
+                if (c.id && c.lid) mappings.push({ jid: c.id, lid: c.lid });
+            }
+            if (mappings.length > 0) {
+                console.log(`[LID] Menyinkronkan ${mappings.length} kontak dari contacts.set`);
+                updateLidMapping(mappings);
+            }
+        });
+
+        // messaging-history.set carries initial history sync which contains contacts
+        this.sock.ev.on('messaging-history.set', ({ contacts }) => {
+            if (contacts) {
+                const mappings = [];
+                for (const c of contacts) {
+                    if (c.id && c.lid) mappings.push({ jid: c.id, lid: c.lid });
+                }
+                if (mappings.length > 0) {
+                    console.log(`[LID] Menyinkronkan ${mappings.length} kontak dari messaging-history.set`);
+                    updateLidMapping(mappings);
+                }
+            }
+        });
+
         // lid-mapping.update is a dedicated Baileys event for LID resolution
         // (available in newer Baileys versions; safe no-op if not emitted)
         this.sock.ev.on('lid-mapping.update', (mappings) => {
             updateLidMapping(mappings);
         });
+
 
         // Listener untuk Pesan Masuk (Webhook Inbound)
         this.sock.ev.on('messages.upsert', async (m) => {
@@ -145,6 +186,7 @@ class WAManager extends EventEmitter {
                 const senderInfo = getUserId(msg);
                 const participant = senderInfo.id;
                 const isLidBased = senderInfo.isLidBased;
+                const phone = isLidBased ? null : senderInfo.id;
                 const pushName = msg.pushName || 'Unknown Contact';
 
                 db.getWebhookUrl().then(webhookUrl => {
@@ -155,6 +197,7 @@ class WAManager extends EventEmitter {
                                 id: msg.key.id,
                                 from: sender,
                                 participant: participant,
+                                phone: phone,
                                 pushName: pushName,
                                 isGroup: isGroup,
                                 isLidBased: isLidBased,
@@ -166,6 +209,7 @@ class WAManager extends EventEmitter {
                                 rawContext: msg.message
                             }
                         };
+
 
                         fetch(webhookUrl, {
                             method: 'POST',

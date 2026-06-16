@@ -16,6 +16,7 @@
  */
 
 const { jidNormalizedUser } = require('@whiskeysockets/baileys');
+const db = require('./db');
 
 /**
  * In-memory store: bare LID string → standard phone JID
@@ -39,9 +40,34 @@ function updateLidMapping(mappings) {
             const lid = entry.lid.split('@')[0];
             lidToJidMap.set(lid, entry.jid);
             console.log(`[LID] Mapped LID ${lid} → ${entry.jid}`);
+
+            // Persist to SQLite DB
+            db.saveLidMapping(lid, entry.jid).catch(err => {
+                console.error(`[LID] Gagal menyimpan mapping LID ${lid} ke DB:`, err.message);
+            });
         }
     }
 }
+
+/**
+ * Load all LID mappings from SQLite database into the in-memory map.
+ */
+async function loadLidMappingsFromDB() {
+    try {
+        const mappings = await db.loadAllLidMappings();
+        let count = 0;
+        for (const row of mappings) {
+            if (row.lid && row.jid) {
+                lidToJidMap.set(row.lid, row.jid);
+                count++;
+            }
+        }
+        console.log(`[LID] Berhasil memuat ${count} mapping LID dari SQLite.`);
+    } catch (err) {
+        console.error('[LID] Gagal memuat mapping dari SQLite:', err.message);
+    }
+}
+
 
 /**
  * Determine whether a JID is an Android LID rather than a standard phone JID.
@@ -123,8 +149,14 @@ function normalizeJid(jid) {
 function getUserId(msg) {
     const rawJid = msg.key.participant || msg.key.remoteJid || '';
     const altJid = msg.key.remoteJidAlt || null;
+    const senderPn = msg.key.senderPn || null;
 
-    console.log(`[JID] Original: ${rawJid}${altJid ? ` | Alt: ${altJid}` : ''}`);
+    console.log(`[JID] Original: ${rawJid}${altJid ? ` | Alt: ${altJid}` : ''}${senderPn ? ` | senderPn: ${senderPn}` : ''}`);
+
+    // Auto-capture mapping if Baileys provides senderPn (phone JID) for a LID
+    if (isLid(rawJid) && senderPn && !isLid(senderPn)) {
+        updateLidMapping([{ lid: rawJid, jid: senderPn }]);
+    }
 
     // If the primary JID is a LID but remoteJidAlt is a standard phone JID, prefer the alt
     if (isLid(rawJid) && altJid && !isLid(altJid)) {
@@ -143,4 +175,4 @@ function getUserId(msg) {
     return { id, jid: normalizedJid, isLidBased: stillLid };
 }
 
-module.exports = { updateLidMapping, normalizeJid, getUserId, isLid, lidToJidMap };
+module.exports = { updateLidMapping, normalizeJid, getUserId, isLid, lidToJidMap, loadLidMappingsFromDB };
