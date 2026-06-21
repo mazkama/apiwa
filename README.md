@@ -2,44 +2,40 @@
 
 A self-hosted, scalable, and professional WhatsApp API Gateway built on top of **Node.js** and the **[Baileys](https://github.com/WhiskeySockets/Baileys)** library. APIWA is designed with Clean Architecture to seamlessly and securely bridge your internal systems (PHP, Laravel, Python, etc.) with the Meta WhatsApp network.
 
-
 ## ✨ Features & Capabilities
 
 ### 1. 🛡️ Production-Ready Security & Architecture
 - **Environment Variables (`.env`)**: Core configurations are strongly encapsulated safely outside the source code, making the app highly secure and ready for Cloud VPS hosting.
-- **Clean & Modular Architecture**: Complex logic is neatly organized into specific, maintainable modules (`server.js`, `wa.js`, `queue.js`, `db.js`).
-- **Persistent SQLite Storage**: API Keys, Webhook URLs, and **WhatsApp LID-to-Phone mappings** are safely stored in a local SQLite database, ensuring your vital configurations and contact mappings persist seamlessly across server restarts.
+- **Clean & Modular Architecture**: Complex logic is neatly organized into specific, maintainable modules (`server.js`, `wa.js`, `sessionManager.js`, `queue.js`, `db.js`).
+- **Persistent SQLite Storage**: API Keys, Webhook URLs, multi-session data, and WhatsApp LID-to-Phone mappings are safely stored in a local SQLite database, ensuring your vital configurations and contact mappings persist seamlessly across server restarts.
 
-### 2. 💻 Minimal Tailwind CSS Web Dashboard
-- **Interactive API Tester (Playground)**: Features an integrated testing UI with auto-filled mock payloads! You can simulate live HTTP requests (Text, Image, PDF) directly from your browser sidebar to your core WA engine and catch real-time JSON responses.
-- **Secure Control Panel**: An elegant, responsive, and password-protected Single Page Application (SPA) built using pure Tailwind CSS and secured by encrypted Session Cookies.
-- **Real-Time Status Monitor**: Visual indicators (Connecting, Waiting for QR, Connected) that update live.
-- **Built-in QR Scanner**: Pair your WhatsApp account (Linked Devices) by scanning the QR code directly from the web UI.
-- **API Credentials Manager**: Features a "1-Click Generate New Key" button to instantly rotate and revoke your secret API Token.
-- **Inbound Webhook Config**: Seamlessly configure or disable your external Webhook URL endpoint for incoming messages via the graphical UI.
+### 2. 📱 Multi-Session Node Management
+- **Add Unlimited Devices**: Pair multiple WhatsApp accounts from a single gateway. Easily separate the workload for your "Sales", "Support", or "IT" numbers.
+- **Auto-Boot Mappings**: Once a session is created and paired, the server will autonomously restore and reconnect every single device immediately upon booting.
+- **Device-Specific Configurations (Multi-Tenant)**: 
+  - Each WhatsApp node/session can optionally run with its own **Unique API Key** and point to its own **Unique Webhook URL**. 
+  - If a device-specific configuration is not provided, the session will smoothly fall back to the **Global Integrations** configuration.
 
-### 3. 🚀 Outbound REST API (Message Broadcasting)
-*All `/api/v1/...` endpoints are strictly protected by standard `x-api-key` or `Authorization: Bearer` HTTP Headers.*
-- **Dual-Identifier Formatting Engine**: The core engine automatically handles both standard **Phone Numbers** and WhatsApp **LIDs (Linked IDs)**.
-  - **Phone Numbers**: Automatically converts local formats (e.g., `0812...` or `62812...`) to Meta's strict JID standard (`62812...@s.whatsapp.net`).
-  - **LIDs (Linked IDs)**: Automatically detects new Android-based LIDs (starting with `7` and 14+ digits) and formats them as `@lid`. An optional `type: "lid"` can still be passed for manual override.
-- **Send Text**: Seamlessly broadcast standard string notifications.
-- **Send Image (URL & Base64)**: Send images via public URLs or auto-decode long *Base64 String payloads* to reconstruct media files on-the-fly.
-- **Send Document**: Send digital documents (PDFs, Word files, ZIPs) with full filename customization.
+### 3. 💻 Modern Multi-Tenant Web Dashboard
+- **Responsive "Card Grid" UI**: An elegant, responsive, and mobile-friendly Single Page Application (SPA) designed to monitor multiple device connection states at a glance.
+- **Interactive API Tester (Playground)**: Features an integrated testing UI. Select any active session from the dropdown and simulate live HTTP requests (Text, Image, PDF) directly from your browser.
+- **API Credentials Manager**: Generate "Global API Keys" or "Device-Specific API Keys" instantly to securely rotate your access tokens.
+- **Inbound Webhook Config**: Seamlessly configure external Webhook URL endpoints for incoming messages via the graphical UI.
 
-### 4. 🪝 Advanced Inbound Webhook API (Real-Time Callback)
-- **Instant HTTP POST Transfer**: Whenever a message is received, the Node.js engine instantly packages the data and fires it to your external Company Backend via an Enterprise JSON Webhook POST payload.
-- **Deep Meta Inspection**: Features Native Message Type detection (`type`: text, image, document), Android/iOS grouping (`device`), LID identification (`isLidBased`), **standard phone number extraction (`phone`)**, and a complete delivery of `rawContext` Baileys buffer for advanced parsing.
-- Perfect for building **Auto-Reply Customer Service**, Billing Validations, or **ChatGPT-powered AI Bots**.
+### 4. 🚀 Outbound REST API (Message Broadcasting)
+*All `/api/v1/...` endpoints are protected by standard `x-api-key` or `Authorization: Bearer` HTTP Headers.*
+- **URL Structure**: Requests now explicitly target a `sessionId` in the URL path (e.g., `POST /api/v1/:sessionId/send-message`).
+- **Dual-Identifier Formatting Engine**: Automatically handles both standard Phone Numbers and WhatsApp LIDs (Linked IDs).
+- **Send Text, Image, & Document**: Fully supports raw media uploads via Base64 or direct URL streaming.
 
-### 5. ⏳ Smart Delay Queue (Anti-Banned Rate Limiter)
-- **Fire-And-Forget Architecture**: Blast 1,000 promotional messages concurrently via Postman/PHP, and APIWA instantly responds with `{"status": "queued"}` without freezing your application's loading screen.
-- **Background Interval Limiter**: APIWA buffers queued messages and trickles them out to Meta's servers at a highly disciplined rate of **1 Message every 3 Seconds**. This acts as an umbrella to protect your Company Number from being flagged as Spam.
+### 5. 🪝 Advanced Inbound Webhook API (Real-Time Callback)
+- **Instant HTTP POST Transfer**: Whenever a message is received on any connected node, the Node.js engine instantly fires it to your specified Webhook URL.
+- **Session Tracking**: Webhook payloads are now enriched with `"sessionId"` and `"sessionName"` properties, making it effortless to identify which specific WhatsApp node received the incoming message.
+- **Deep Meta Inspection**: Features Native Message Type detection, LID identification, standard phone number extraction (`phone`), and a complete delivery of `rawContext`.
 
-### 6. 🔄 Automatic WhatsApp LID-to-Phone Mapping Engine
-- **Protocol Mismatch Resolution**: Automatically runs on `@whiskeysockets/baileys@6.7.23` (legacy stable branch) to avoid `init queries Timed Out` issues and stay fully compatible with WhatsApp's latest secure handshake protocols.
-- **Transparent Mapping Resolution**: Seamlessly listens to WhatsApp's initial history sync (`contacts.set`, `messaging-history.set`) and captures real-time message metadata (`senderPn`, `remoteJidAlt`) to resolve LIDs (Linked IDs, e.g., `70850149654769@lid`) to their respective phone JIDs.
-- **SQLite Persistence**: Automatically stores and retrieves these mappings in a local SQLite table (`lid_phone_map`), making sure they survive server restarts and consistently populate the `phone` field in your inbound Webhooks.
+### 6. ⏳ Smart Delay Queue (Anti-Banned Rate Limiter)
+- **Isolated Rate Limiting**: Each Session Node operates its own independent `QueueManager`.
+- **Fire-And-Forget Architecture**: Blast thousands of messages concurrently, and APIWA instantly responds with `{"status": "queued"}`. The system buffers queued messages and trickles them out at a highly disciplined rate (1 Message every 3 Seconds) per active session.
 
 ---
 
@@ -65,7 +61,7 @@ Copy the `.env.example` file to create your own configuration:
 ```bash
 cp .env.example .env
 ```
-Open the newly created `.env` file using any text editor and change the default values. This is where you configure your dynamic variables (Username, Password, and Port):
+Open the newly created `.env` file using any text editor and change the default values:
 ```env
 # Server Configuration
 PORT=3000
@@ -85,10 +81,20 @@ npm start
 ```
 *(For production VPS, it is recommended to use PM2: `pm2 start index.js --name apiwa`)*
 
-### 6. Login & Pair WhatsApp
+### 6. Login & Pair Devices
 1. Open your browser and go to `http://localhost:3000` (or your VPS IP).
 2. Log in using the credentials you defined in `.env`.
-3. Go to WhatsApp on your phone (Linked Devices) and scan the **QR Code** displayed on the Dashboard until the status turns to **Connected**.
+3. In the "My Devices" tab, click **Add New Device**. 
+4. Click **View QR Code** and scan it via the WhatsApp app on your phone.
+
+---
+
+## 📖 Integration Note: Using Only One Session
+If you intend to use this system strictly as a single-number gateway (just one WhatsApp session), the integration methodology remains straightforward:
+
+1. **API Key & Webhook**: You can completely ignore the "Device Configurations" (⚙️ icon) and strictly rely on the **Global API Key** and **Global Webhook** settings inside the "Keys & Webhooks" menu.
+2. **Session ID Reference**: When making API POST requests, simply use the auto-generated `sessionId` (e.g., `wa-2272a36e`) in your HTTP client path: `POST /api/v1/wa-2272a36e/send-message`.
+3. **Webhook Identification**: All inbound webhooks will be posted to your Global Webhook URL. You can ignore the `sessionId` attribute in the JSON payload since you know all traffic is originating from your single node.
 
 ---
 

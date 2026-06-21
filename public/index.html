@@ -3,178 +3,193 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>APIWA Gateway</title>
+    <title>APIWA Gateway Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.0/build/qrcode.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .tab-content { display: none; animation: fadeIn 0.3s ease-out; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .tab-content { display: none; animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .tab-content.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        
-        #toast-container { z-index: 50; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        #toast-container { z-index: 100; }
         .toast-enter { animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .toast-exit { animation: fadeOut 0.3s ease-out forwards; }
-        @keyframes slideIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
-        @keyframes fadeOut { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(100%); } }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(1rem) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes fadeOut { from { opacity: 1; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(0.5rem) scale(0.95); } }
     </style>
 </head>
-<body class="bg-slate-50 flex h-screen overflow-hidden text-slate-800">
+<body class="bg-[#f8fafc] flex flex-col md:flex-row h-screen overflow-hidden text-slate-800">
 
-    <!-- Sidebar -->
-    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col">
-        <div class="h-16 flex items-center px-6 border-b border-slate-200">
-            <svg class="w-6 h-6 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-            <span class="text-lg font-bold text-slate-900 tracking-tight">APIWA Gateway</span>
+    <!-- Mobile Top Navigation Header -->
+    <header class="md:hidden bg-white border-b border-slate-200 h-16 px-4 flex items-center justify-between shrink-0">
+        <div class="flex items-center">
+            <div class="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black shadow-md shadow-blue-500/20 mr-2.5">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            </div>
+            <span class="text-md font-extrabold text-slate-900 tracking-tight">APIWA Gateway</span>
+        </div>
+        <button onclick="toggleMobileSidebar()" class="p-2 text-slate-500 hover:text-slate-800 focus:outline-none">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+        </button>
+    </header>
+
+    <!-- Sidebar Wrapper for Mobile & Desktop -->
+    <aside id="sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-200 ease-in-out z-40 w-64 bg-white border-r border-slate-200 flex flex-col h-full shrink-0">
+        <!-- Brand logo header (desktop only) -->
+        <div class="hidden md:flex h-20 items-center px-6 border-b border-slate-100">
+            <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black shadow-lg shadow-blue-500/20 mr-3">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            </div>
+            <span class="text-lg font-extrabold text-slate-900 tracking-tight">APIWA Gateway</span>
         </div>
         
-        <nav class="flex-1 px-4 py-6 space-y-2">
-            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center px-4 py-2.5 text-sm font-medium rounded-lg bg-blue-50 text-blue-700 transition-colors">
-                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
-                Gateway Monitor
+        <nav class="flex-1 px-4 py-6 space-y-1.5">
+            <button onclick="switchTab('devices')" id="nav-devices" class="nav-btn w-full flex items-center px-4 py-3 text-sm font-semibold rounded-xl bg-blue-50 text-blue-700 transition-all duration-150">
+                <svg class="w-5 h-5 mr-3 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                My Devices
             </button>
-            <button onclick="switchTab('credentials')" id="nav-credentials" class="nav-btn w-full flex items-center px-4 py-2.5 text-sm font-medium rounded-lg text-slate-600 hover:bg-slate-100 transition-colors">
-                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+            <button onclick="switchTab('credentials')" id="nav-credentials" class="nav-btn w-full flex items-center px-4 py-3 text-sm font-semibold rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-all duration-150">
+                <svg class="w-5 h-5 mr-3 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
                 Keys & Webhooks
             </button>
-            <button onclick="switchTab('playground')" id="nav-playground" class="nav-btn w-full flex items-center px-4 py-2.5 text-sm font-medium rounded-lg text-slate-600 hover:bg-slate-100 transition-colors">
-                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+            <button onclick="switchTab('playground')" id="nav-playground" class="nav-btn w-full flex items-center px-4 py-3 text-sm font-semibold rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-all duration-150">
+                <svg class="w-5 h-5 mr-3 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
                 API Playground
             </button>
         </nav>
         
-        <div class="p-4 border-t border-slate-200">
-            <button onclick="logoutSystem()" class="w-full flex items-center px-4 py-2.5 text-sm font-medium rounded-lg text-red-600 hover:bg-red-50 transition-colors">
-                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+        <div class="p-4 border-t border-slate-100">
+            <button onclick="logoutSystem()" class="w-full flex items-center px-4 py-3 text-sm font-semibold rounded-xl text-red-600 hover:bg-red-50 transition-all duration-150">
+                <svg class="w-5 h-5 mr-3 opacity-95" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
                 Log Out
             </button>
         </div>
     </aside>
 
-    <!-- Main Content -->
+    <!-- Overlay behind mobile sidebar -->
+    <div id="sidebar-overlay" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-30 hidden md:hidden"></div>
+
+    <!-- Main Content Area -->
     <main class="flex-1 flex flex-col overflow-hidden relative">
-        <div class="flex-1 overflow-y-auto bg-slate-50 p-8">
+        <div class="flex-1 overflow-y-auto bg-[#f8fafc] px-4 py-6 md:p-8">
             <div class="max-w-5xl mx-auto">
                 
-                <!-- DASHBOARD TAB -->
-                <div id="dashboard" class="tab-content active">
-                    <div class="mb-8">
-                        <h1 class="text-2xl font-bold text-slate-900">Gateway Monitor</h1>
-                        <p class="text-slate-500 mt-1">Monitor the heartbeat of your WhatsApp connection directly from this console.</p>
+                <!-- DEVICES TAB -->
+                <div id="devices" class="tab-content active">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+                        <div>
+                            <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">WhatsApp Devices</h1>
+                            <p class="text-slate-500 text-sm mt-1">Deploy, monitor, and configure all your multi-session WhatsApp nodes.</p>
+                        </div>
+                        <button onclick="openAddDeviceModal()" class="px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-md shadow-blue-500/10 hover:shadow-blue-500/25 transition-all flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+                            Add New Device
+                        </button>
                     </div>
 
-                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
-                        <div class="flex justify-between items-center mb-6 pb-6 border-b border-slate-100">
-                            <div>
-                                <h3 class="text-lg font-semibold text-slate-800">Connection Engine</h3>
-                                <p class="text-sm text-slate-500">Live status with Meta Servers.</p>
-                            </div>
-                            <span id="statusBadge" class="px-4 py-1.5 rounded-full text-sm font-semibold bg-slate-100 text-slate-600 flex items-center gap-2">
-                                <span class="w-2 h-2 rounded-full bg-slate-400"></span> Connecting...
-                            </span>
-                        </div>
-                        
-                        <div id="qrContainer" class="flex flex-col justify-center items-center min-h-[250px] bg-slate-50 rounded-xl border-2 border-dashed border-slate-200 mb-6">
-                            <div class="text-slate-500 flex items-center gap-2">
-                                <svg class="animate-spin h-5 w-5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                Waiting for WhatsApp...
-                            </div>
-                        </div>
-
-                        <div class="flex justify-end gap-3">
-                            <button onclick="resetWA()" class="px-4 py-2 bg-white border border-red-200 text-red-600 rounded-lg hover:bg-red-50 text-sm font-medium transition-colors">Reset WA Session</button>
-                            <button onclick="fetchStatus()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors shadow-sm">Refresh Status</button>
-                        </div>
+                    <!-- Devices Grid -->
+                    <div id="devicesGrid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Dynamic Device Cards injected here -->
                     </div>
                 </div>
 
                 <!-- CREDENTIALS TAB -->
                 <div id="credentials" class="tab-content">
                     <div class="mb-8">
-                        <h1 class="text-2xl font-bold text-slate-900">Keys & Webhooks</h1>
-                        <p class="text-slate-500 mt-1">Configure your outbound APIs and manage incoming event listeners securely.</p>
+                        <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">Global Configurations</h1>
+                        <p class="text-slate-500 text-sm mt-1">Configure your default system-wide integrations and settings.</p>
                     </div>
 
-                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
-                        <div class="flex items-start gap-4 mb-6">
-                            <div class="p-3 bg-indigo-50 text-indigo-600 rounded-lg">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+                        <!-- Global API Key Card -->
+                        <div class="bg-white rounded-3xl border border-slate-200/70 p-7 shadow-sm flex flex-col hover:shadow-md transition-shadow duration-300">
+                            <div class="flex items-start gap-4 mb-6">
+                                <div class="p-3.5 bg-blue-50 text-blue-600 rounded-2xl">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-bold text-slate-800 tracking-tight">Global API Key</h3>
+                                    <p class="text-[13px] text-slate-500 mt-1.5 leading-relaxed">The default authentication token used for REST API requests if a device doesn't have a specific key.</p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 class="text-lg font-semibold text-slate-800">1. Outbound API Key</h3>
-                                <p class="text-sm text-slate-500 mt-1">Use this token as <code>x-api-key</code> or <code>Authorization: Bearer</code> header when performing REST API POST requests.</p>
+                            
+                            <div class="mt-auto">
+                                <div class="flex flex-col sm:flex-row gap-3 mb-4">
+                                    <input type="text" id="apiKeyInput" readonly value="Loading..." class="flex-1 font-mono text-sm bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-slate-600 focus:outline-none focus:border-blue-500 transition-all">
+                                    <button onclick="copyApiKey()" class="px-5 py-3.5 bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold rounded-xl transition-all shadow-sm">Copy Key</button>
+                                </div>
+                                <button onclick="generateKey()" class="text-[13px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1.5 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg> Rotate Key
+                                </button>
                             </div>
                         </div>
-                        
-                        <div class="flex gap-3 mb-4">
-                            <input type="text" id="apiKeyInput" readonly value="Loading..." class="flex-1 font-mono text-sm bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-                            <button onclick="copyApiKey()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-sm font-medium rounded-lg transition-colors shadow-sm focus:ring-2 focus:ring-slate-500">Copy Key</button>
-                        </div>
-                        <button onclick="generateKey()" class="text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg> Rotate Key
-                        </button>
-                    </div>
 
-                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
-                        <div class="flex items-start gap-4 mb-6">
-                            <div class="p-3 bg-emerald-50 text-emerald-600 rounded-lg">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        <!-- Global Webhook Card -->
+                        <div class="bg-white rounded-3xl border border-slate-200/70 p-7 shadow-sm flex flex-col hover:shadow-md transition-shadow duration-300">
+                            <div class="flex items-start gap-4 mb-6">
+                                <div class="p-3.5 bg-emerald-50 text-emerald-600 rounded-2xl">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-bold text-slate-800 tracking-tight">Global Webhook URL</h3>
+                                    <p class="text-[13px] text-slate-500 mt-1.5 leading-relaxed">All incoming messages will be forwarded via HTTP POST to this endpoint unless specified per device.</p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 class="text-lg font-semibold text-slate-800">2. Inbound Webhook Listener</h3>
-                                <p class="text-sm text-slate-500 mt-1">Receive live HTTP POST generic JSON payloads containing incoming visitor messages.</p>
+                            
+                            <div class="mt-auto">
+                                <label class="block text-[11px] font-bold text-slate-400 mb-2 uppercase tracking-wider">Webhook Endpoint</label>
+                                <div class="flex flex-col sm:flex-row gap-3">
+                                    <input type="url" id="webhookInput" placeholder="https://api.yourdomain.com/webhook" class="flex-1 font-mono text-sm bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-slate-600 focus:outline-none focus:border-emerald-500 transition-all">
+                                    <button id="saveWebhookBtn" onclick="saveWebhook()" class="px-5 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm">Save Config</button>
+                                </div>
                             </div>
-                        </div>
-                        
-                        <div class="flex gap-3">
-                            <input type="url" id="webhookInput" placeholder="https://yourbackend.com/webhook-callback" class="flex-1 font-mono text-sm bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all">
-                            <button id="saveWebhookBtn" onclick="saveWebhook()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm focus:ring-2 focus:ring-emerald-500">Save Webhook</button>
                         </div>
                     </div>
                 </div>
 
                 <!-- TESTER TAB -->
                 <div id="playground" class="tab-content">
-                    <div class="flex justify-between items-end mb-8">
-                        <div>
-                            <h1 class="text-2xl font-bold text-slate-900">API Playground</h1>
-                            <p class="text-slate-500 mt-1">Simulate requests instantly from the browser to ensure stability.</p>
-                        </div>
-                        <a href="/APIWA_Postman_Collection.json" download class="flex items-center gap-2 px-4 py-2 bg-orange-50 text-orange-600 hover:bg-orange-100 rounded-lg text-sm font-bold transition-colors">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                            Postman Pack
-                        </a>
+                    <div class="mb-8">
+                        <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">API Playground</h1>
+                        <p class="text-slate-500 text-sm mt-1">Simulate REST API requests instantly right from your gateway interface.</p>
+                    </div>
+
+                    <!-- SELECT SESSION FOR TESTING -->
+                    <div class="bg-white rounded-2xl border border-slate-200/80 p-6 mb-6 shadow-sm">
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Select Active Device/Session</label>
+                        <select id="playgroundSessionSelect" onchange="updatePlaygroundApiKeyHint()" class="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-semibold text-slate-700">
+                            <!-- Dynamic Connected Sessions populated here -->
+                        </select>
                     </div>
 
                     <!-- SEND TEXT -->
-                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+                    <div class="bg-white rounded-2xl border border-slate-200/80 overflow-hidden mb-6 shadow-sm">
                         <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
                             <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded shadow-sm">POST</span>
-                            <span class="font-mono text-sm font-semibold text-slate-700">/api/v1/send-message</span>
+                            <span class="font-mono text-sm font-semibold text-slate-700">/api/v1/:sessionId/send-message</span>
                         </div>
                         <div class="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
                             <div class="space-y-4">
                                 <h4 class="font-bold text-slate-800 flex items-center gap-2"><svg class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"></path></svg> Request Builder</h4>
                                 <div>
-                                    <label class="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Number</label>
-                                    <input type="text" id="testTextNumber" value="08123456789" class="w-full text-sm bg-white border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono">
+                                    <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Recipient Number</label>
+                                    <input type="text" id="testTextNumber" value="08123456789" class="w-full text-sm bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono">
                                 </div>
                                 <div>
-                                    <label class="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Message</label>
-                                    <textarea id="testTextMessage" rows="3" class="w-full text-sm bg-white border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 transition-all">Halo! Ini adalah notifikasi pengujian langsung dari Dashboard berbasis Tailwind CSS. 🚀</textarea>
+                                    <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Message Content</label>
+                                    <textarea id="testTextMessage" rows="3" class="w-full text-sm bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 transition-all">Halo! Ini adalah notifikasi pengujian langsung dari Dashboard berbasis Tailwind CSS.</textarea>
                                 </div>
-                                <button onclick="testSendText()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">Send Request</button>
+                                <button onclick="testSendText()" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm shadow-blue-500/10">Send Request</button>
                                 
                                 <div class="mt-4">
-                                    <label class="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Response JSON</label>
-                                    <pre id="resText" class="w-full bg-slate-900 border border-slate-800 text-green-400 p-3 rounded-lg text-xs font-mono min-h-[60px] overflow-auto shadow-inner">Waiting...</pre>
+                                    <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Response JSON</label>
+                                    <pre id="resText" class="w-full bg-slate-900 border border-slate-800 text-green-400 p-4 rounded-xl text-xs font-mono min-h-[60px] overflow-auto shadow-inner">Waiting...</pre>
                                 </div>
                             </div>
-                            <div class="bg-slate-50 rounded-xl p-5 border border-slate-200">
-                                <h4 class="font-semibold text-slate-800 mb-3">Payload Schema Definition</h4>
-                                <pre class="text-[13px] font-mono text-indigo-600 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">{
+                            <div class="bg-slate-50 rounded-xl p-5 border border-slate-100 flex flex-col justify-center">
+                                <h4 class="font-semibold text-slate-800 mb-3 text-sm">Payload Schema Definition</h4>
+                                <pre class="text-[13px] font-mono text-indigo-600 bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm">{
   "number": "62899xxxx",
   "message": "Hello World!"
 }</pre>
@@ -183,35 +198,35 @@
                     </div>
 
                     <!-- SEND IMAGE -->
-                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+                    <div class="bg-white rounded-2xl border border-slate-200/80 overflow-hidden mb-6 shadow-sm">
                         <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
                             <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded shadow-sm">POST</span>
-                            <span class="font-mono text-sm font-semibold text-slate-700">/api/v1/send-image</span>
+                            <span class="font-mono text-sm font-semibold text-slate-700">/api/v1/:sessionId/send-image</span>
                         </div>
                         <div class="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
                             <div class="space-y-4">
                                 <div>
-                                    <label class="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Number</label>
-                                    <input type="text" id="testImageNumber" value="08123456789" class="w-full text-sm bg-white border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono">
+                                    <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Recipient Number</label>
+                                    <input type="text" id="testImageNumber" value="08123456789" class="w-full text-sm bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono">
                                 </div>
                                 <div>
-                                    <label class="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Image URL / Base64</label>
-                                    <input type="text" id="testImageUrl" value="https://images.unsplash.com/photo-1541963463532-d68292c34b19" class="w-full text-sm bg-white border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono break-all">
+                                    <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Image URL / Base64</label>
+                                    <input type="text" id="testImageUrl" value="https://images.unsplash.com/photo-1541963463532-d68292c34b19" class="w-full text-sm bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono break-all">
                                 </div>
                                 <div>
-                                    <label class="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Caption</label>
-                                    <input type="text" id="testImageCaption" value="Wallpaper cantik dari API Gateway Modern" class="w-full text-sm bg-white border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                                    <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Caption</label>
+                                    <input type="text" id="testImageCaption" value="Wallpaper cantik dari API Gateway Modern" class="w-full text-sm bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 transition-all">
                                 </div>
-                                <button onclick="testSendImage()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">Send Request</button>
+                                <button onclick="testSendImage()" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm shadow-blue-500/10">Send Request</button>
                                 
                                 <div class="mt-4">
-                                    <label class="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Response JSON</label>
-                                    <pre id="resImage" class="w-full bg-slate-900 border border-slate-800 text-green-400 p-3 rounded-lg text-xs font-mono min-h-[60px] overflow-auto shadow-inner">Waiting...</pre>
+                                    <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Response JSON</label>
+                                    <pre id="resImage" class="w-full bg-slate-900 border border-slate-800 text-green-400 p-4 rounded-xl text-xs font-mono min-h-[60px] overflow-auto shadow-inner">Waiting...</pre>
                                 </div>
                             </div>
-                            <div class="bg-slate-50 rounded-xl p-5 border border-slate-200">
-                                <h4 class="font-semibold text-slate-800 mb-3">Payload Schema Definition</h4>
-                                <pre class="text-[13px] font-mono text-indigo-600 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">{
+                            <div class="bg-slate-50 rounded-xl p-5 border border-slate-100 flex flex-col justify-center">
+                                <h4 class="font-semibold text-slate-800 mb-3 text-sm">Payload Schema Definition</h4>
+                                <pre class="text-[13px] font-mono text-indigo-600 bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm">{
   "number": "62899xxxx",
   "image_url": "https://...jpg",
   "caption": "Optional description."
@@ -221,41 +236,41 @@
                     </div>
 
                     <!-- SEND DOCUMENT -->
-                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+                    <div class="bg-white rounded-2xl border border-slate-200/80 overflow-hidden mb-6 shadow-sm">
                         <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
                             <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded shadow-sm">POST</span>
-                            <span class="font-mono text-sm font-semibold text-slate-700">/api/v1/send-document</span>
+                            <span class="font-mono text-sm font-semibold text-slate-700">/api/v1/:sessionId/send-document</span>
                         </div>
                         <div class="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
                             <div class="space-y-4">
                                 <div>
-                                    <label class="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Number</label>
-                                    <input type="text" id="testDocNumber" value="08123456789" class="w-full text-sm bg-white border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono">
+                                    <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Recipient Number</label>
+                                    <input type="text" id="testDocNumber" value="08123456789" class="w-full text-sm bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono">
                                 </div>
                                 <div>
-                                    <label class="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Document Link / Base64</label>
-                                    <input type="text" id="testDocUrl" value="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" class="w-full text-sm bg-white border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono break-all">
+                                    <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Document Link / Base64</label>
+                                    <input type="text" id="testDocUrl" value="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" class="w-full text-sm bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono break-all">
                                 </div>
                                 <div class="flex gap-4">
                                     <div class="flex-1">
-                                        <label class="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Alias Filename</label>
-                                        <input type="text" id="testDocName" value="Digital Invoice #9011.pdf" class="w-full text-sm bg-white border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                                        <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Alias Filename</label>
+                                        <input type="text" id="testDocName" value="Digital Invoice #9011.pdf" class="w-full text-sm bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 transition-all">
                                     </div>
                                     <div class="flex-[0.8]">
-                                        <label class="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Mimetype</label>
-                                        <input type="text" id="testDocMime" value="application/pdf" class="w-full text-sm bg-white border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono">
+                                        <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Mimetype</label>
+                                        <input type="text" id="testDocMime" value="application/pdf" class="w-full text-sm bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono">
                                     </div>
                                 </div>
-                                <button onclick="testSendDocument()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">Send Request</button>
+                                <button onclick="testSendDocument()" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm shadow-blue-500/10">Send Request</button>
                                 
                                 <div class="mt-4">
-                                    <label class="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Response JSON</label>
-                                    <pre id="resDoc" class="w-full bg-slate-900 border border-slate-800 text-green-400 p-3 rounded-lg text-xs font-mono min-h-[60px] overflow-auto shadow-inner">Waiting...</pre>
+                                    <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Response JSON</label>
+                                    <pre id="resDoc" class="w-full bg-slate-900 border border-slate-800 text-green-400 p-4 rounded-xl text-xs font-mono min-h-[60px] overflow-auto shadow-inner">Waiting...</pre>
                                 </div>
                             </div>
-                            <div class="bg-slate-50 rounded-xl p-5 border border-slate-200">
-                                <h4 class="font-semibold text-slate-800 mb-3">Payload Schema Definition</h4>
-                                <pre class="text-[13px] font-mono text-indigo-600 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">{
+                            <div class="bg-slate-50 rounded-xl p-5 border border-slate-100 flex flex-col justify-center">
+                                <h4 class="font-semibold text-slate-800 mb-3 text-sm">Payload Schema Definition</h4>
+                                <pre class="text-[13px] font-mono text-indigo-600 bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm">{
   "number": "62899xxxx",
   "document_url": "https://...pdf",
   "filename": "Invoice.pdf",
@@ -274,19 +289,103 @@
         <div id="toast-container" class="absolute bottom-8 right-8 flex flex-col gap-3"></div>
     </main>
 
+    <!-- Modal QR Code -->
+    <div id="qrModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 shadow-2xl w-full max-w-sm border border-slate-200 flex flex-col items-center animate-[fadeIn_0.2s_ease-out_forwards]">
+            <div class="flex justify-between w-full items-center mb-4">
+                <h3 id="qrModalTitle" class="text-md font-bold text-slate-800">Scan QR Code</h3>
+                <button onclick="closeQrModal()" class="text-slate-400 hover:text-slate-600 bg-slate-50 p-1.5 rounded-lg transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div id="qrModalContent" class="bg-slate-50 border border-slate-100 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[220px] w-full">
+                <!-- Image or Loading indicator -->
+            </div>
+            <p class="text-xs text-slate-400 text-center mt-5 leading-relaxed px-2">Open WhatsApp on your device, navigate to settings -> Linked Devices, and aim your camera at this QR code.</p>
+        </div>
+    </div>
+
+    <!-- Modal Add Device -->
+    <div id="addDeviceModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 shadow-2xl w-full max-w-md border border-slate-200 animate-[fadeIn_0.2s_ease-out_forwards]">
+            <div class="flex justify-between items-center mb-5">
+                <h3 class="text-lg font-bold text-slate-800">Add New WhatsApp Device</h3>
+                <button onclick="closeAddDeviceModal()" class="text-slate-400 hover:text-slate-600 bg-slate-50 p-1.5 rounded-lg transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Device Session ID (Auto Generated)</label>
+                    <input type="text" id="newSessionId" readonly class="w-full text-sm bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-3 outline-none font-mono text-slate-500">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Device Name / Display Label</label>
+                    <input type="text" id="newSessionName" placeholder="e.g. CS Team Jakarta" class="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-3 outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-slate-800">
+                </div>
+                <button onclick="submitAddDevice()" class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-md shadow-blue-500/10 transition-all mt-3">Create Device Node</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Device Settings -->
+    <div id="deviceSettingsModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 shadow-2xl w-full max-w-md border border-slate-200 animate-[fadeIn_0.2s_ease-out_forwards]">
+            <div class="flex justify-between items-center mb-5">
+                <h3 id="deviceSettingsTitle" class="text-lg font-bold text-slate-800">Device Configurations</h3>
+                <button onclick="closeDeviceSettingsModal()" class="text-slate-400 hover:text-slate-600 bg-slate-50 p-1.5 rounded-lg transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <input type="hidden" id="settingsSessionId">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Device-Specific API Key</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="settingsApiKey" placeholder="Custom API token for this session" class="flex-1 text-sm bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 font-mono">
+                        <button onclick="generateDeviceSpecificKey()" class="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-xl">Auto</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Device-Specific Webhook URL</label>
+                    <input type="url" id="settingsWebhookUrl" placeholder="https://endpoint-for-this-device.com" class="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 font-mono">
+                </div>
+                <button onclick="submitSaveDeviceSettings()" class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-md shadow-blue-500/10 transition-all mt-3">Save Node Configurations</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        /* --- STATE --- */
+        let sessions = [];
+        let activeQrSessionId = null;
+
+        /* --- MOBILE SIDEBAR TOGGLE --- */
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            const hasClass = sidebar.classList.contains('-translate-x-full');
+            if (hasClass) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        }
+
         /* --- TOAST SYSTEM --- */
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
             
             const icon = type === 'success' ? 
-                '<svg class="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>' : 
-                '<svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+                '<svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>' : 
+                '<svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
             
-            toast.className = `toast-enter flex items-start p-4 bg-white border border-slate-200 shadow-xl rounded-xl text-slate-700 text-sm font-medium z-50`;
-            toast.style.minWidth = '280px';
-            toast.innerHTML = `<div class="mr-3 mt-0.5">${icon}</div> <div><p class="font-bold text-slate-900 mb-0.5">${type === 'success' ? 'Success' : 'Error'}</p><p class="text-slate-600 text-[13px] font-normal">${message}</p></div>`;
+            toast.className = `toast-enter flex items-start p-4 bg-white border border-slate-100 shadow-xl rounded-2xl text-slate-700 text-sm font-medium z-50`;
+            toast.style.minWidth = '300px';
+            toast.innerHTML = `<div class="mr-3.5 mt-0.5">${icon}</div> <div><p class="font-extrabold text-slate-900 mb-0.5">${type === 'success' ? 'Success' : 'Error'}</p><p class="text-slate-500 text-[13px] font-normal leading-relaxed">${message}</p></div>`;
             
             container.appendChild(toast);
             
@@ -303,55 +402,309 @@
             
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.classList.remove('bg-blue-50', 'text-blue-700');
-                btn.classList.add('text-slate-600');
+                btn.classList.add('text-slate-500');
             });
             const clicked = document.getElementById('nav-' + tabId);
-            clicked.classList.remove('text-slate-600');
+            clicked.classList.remove('text-slate-500');
             clicked.classList.add('bg-blue-50', 'text-blue-700');
-        }
 
-        /* --- REAL-TIME ENGINE (WEBSOCKETS) --- */
-        const socket = io();
-        
-        socket.on('statusUpdate', (data) => {
-            updateUIStatus(data);
-        });
-
-        function updateUIStatus(data) {
-            const badge = document.getElementById('statusBadge');
-            const qrContainer = document.getElementById('qrContainer');
-
-            if (data.status === 'CONNECTED') {
-                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span> <span class="text-emerald-700">Connected</span>`;
-                badge.className = "px-4 py-1.5 rounded-full text-sm font-semibold bg-emerald-50 border border-emerald-100 gap-2 flex items-center";
-                qrContainer.innerHTML = '<div class="text-emerald-600 font-bold text-lg flex items-center gap-2 bg-emerald-50 px-6 py-4 rounded-xl border border-emerald-100"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Engine Bridged Successfully</div>';
-            } else if (data.status === 'WAITING_QR' && data.qrCode) {
-                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-orange-500"></span> <span class="text-orange-700">Awaiting QR Scan</span>`;
-                badge.className = "px-4 py-1.5 rounded-full text-sm font-semibold bg-orange-50 border border-orange-100 gap-2 flex items-center";
-                // Tampilkan gambar QR langsung dari API server agar lebih kompatibel dan bebas error JS
-                qrContainer.innerHTML = `<div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
-                    <img src="/api/qr?t=${Date.now()}" class="w-[220px] h-[220px]" alt="Scan QR">
-                </div><p class="mt-4 text-sm text-slate-500 font-medium tracking-wide">Scan via WhatsApp > Linked Devices</p>`;
-            } else if (data.status === 'CONNECTING') {
-                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> <span class="text-blue-700">Pairing...</span>`;
-                badge.className = "px-4 py-1.5 rounded-full text-sm font-semibold bg-blue-50 border border-blue-100 gap-2 flex items-center";
-                qrContainer.innerHTML = '<div class="text-slate-500 font-medium flex items-center gap-3"><svg class="animate-spin h-6 w-6 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Initializing Engine...</div>';
-            } else {
-                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500"></span> <span class="text-red-700">Offline</span>`;
-                badge.className = "px-4 py-1.5 rounded-full text-sm font-semibold bg-red-50 border border-red-100 gap-2 flex items-center";
-                qrContainer.innerHTML = '<div class="text-red-500 font-bold bg-red-50 px-6 py-4 rounded-xl text-center border border-red-100">Engine Terminated.<br><span class="text-sm font-normal text-red-400 mt-2 block">Please reset the WA session to restart.</span></div>';
+            // Auto-close mobile sidebar if open
+            const sidebar = document.getElementById('sidebar');
+            if (!sidebar.classList.contains('-translate-x-full') && window.innerWidth < 768) {
+                toggleMobileSidebar();
             }
         }
 
-        async function fetchStatus() {
-            // Kita tetap biarkan fetchStatus sebagai fallback manual atau pemicu awal,
-            // namun di-update lewat UI logic baru
+        /* --- RANDOM ID GENERATOR --- */
+        function generateRandomSessionId() {
+            const prefix = "wa";
+            const randomHex = Array.from({length: 8}, () => Math.floor(Math.random() * 16).toString(16)).join('');
+            return `${prefix}-${randomHex}`;
+        }
+
+        /* --- MODALS --- */
+        function openAddDeviceModal() {
+            document.getElementById('newSessionId').value = generateRandomSessionId();
+            document.getElementById('addDeviceModal').classList.remove('hidden');
+            document.getElementById('newSessionName').focus();
+        }
+        function closeAddDeviceModal() {
+            document.getElementById('addDeviceModal').classList.add('hidden');
+            document.getElementById('newSessionId').value = '';
+            document.getElementById('newSessionName').value = '';
+        }
+        function openQrModal(sessionId, sessionName) {
+            activeQrSessionId = sessionId;
+            document.getElementById('qrModalTitle').innerText = `Scan QR: ${sessionName}`;
+            document.getElementById('qrModal').classList.remove('hidden');
+            renderQrModalContent();
+        }
+        function closeQrModal() {
+            document.getElementById('qrModal').classList.add('hidden');
+            activeQrSessionId = null;
+        }
+
+        function renderQrModalContent() {
+            if (!activeQrSessionId) return;
+            const session = sessions.find(s => s.id === activeQrSessionId);
+            const container = document.getElementById('qrModalContent');
+            
+            if (session && session.status === 'WAITING_QR' && session.qrCode) {
+                container.innerHTML = `<img src="/api/qr/${session.id}?t=${Date.now()}" class="w-[200px] h-[200px] rounded-xl shadow-inner border border-slate-100" alt="Scan QR">`;
+            } else if (session && session.status === 'CONNECTED') {
+                container.innerHTML = `<div class="flex flex-col items-center gap-2 text-emerald-600"><svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span class="font-extrabold text-sm text-center">Connected Successfully!</span></div>`;
+                setTimeout(closeQrModal, 1500);
+            } else {
+                container.innerHTML = `<div class="flex flex-col items-center gap-3 text-slate-500 text-sm font-semibold"><svg class="animate-spin h-6 w-6 text-blue-600" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"></circle><path fill="currentColor" class="opacity-75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Generating QR Code...</div>`;
+            }
+        }
+
+        /* --- DEVICE SETTINGS MODAL --- */
+        function openDeviceSettingsModal(sessionId, sessionName) {
+            const session = sessions.find(s => s.id === sessionId);
+            if (!session) return;
+            
+            document.getElementById('deviceSettingsTitle').innerText = `Configure Node: ${sessionName}`;
+            document.getElementById('settingsSessionId').value = sessionId;
+            document.getElementById('settingsApiKey').value = session.apiKey || '';
+            document.getElementById('settingsWebhookUrl').value = session.webhookUrl || '';
+            document.getElementById('deviceSettingsModal').classList.remove('hidden');
+        }
+        function closeDeviceSettingsModal() {
+            document.getElementById('deviceSettingsModal').classList.add('hidden');
+            document.getElementById('settingsSessionId').value = '';
+            document.getElementById('settingsApiKey').value = '';
+            document.getElementById('settingsWebhookUrl').value = '';
+        }
+        function generateDeviceSpecificKey() {
+            const key = 'wa_' + Array.from({length: 16}, () => Math.floor(Math.random() * 16).toString(16)).join('');
+            document.getElementById('settingsApiKey').value = key;
+        }
+        async function submitSaveDeviceSettings() {
+            const sessionId = document.getElementById('settingsSessionId').value;
+            const webhookUrl = document.getElementById('settingsWebhookUrl').value.trim();
+            const apiKey = document.getElementById('settingsApiKey').value.trim();
+
             try {
-                const res = await fetch('/api/status');
+                const res = await fetch(`/api/sessions/${sessionId}/settings`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ webhookUrl, apiKey })
+                });
                 const data = await res.json();
-                updateUIStatus(data);
-            } catch (err) {
-                console.error('Failed to grab status', err);
+                if (data.success) {
+                    showToast('Device configurations updated.');
+                    closeDeviceSettingsModal();
+                    await fetchSessions();
+                } else {
+                    showToast(data.error || 'Failed to update settings.', 'error');
+                }
+            } catch (e) {
+                showToast('API connection error.', 'error');
+            }
+        }
+
+        /* --- DEVICE RENDERING --- */
+        function renderDevices() {
+            const grid = document.getElementById('devicesGrid');
+            grid.innerHTML = '';
+            
+            if (sessions.length === 0) {
+                grid.className = "flex justify-center items-center py-20 bg-white border border-slate-200/80 rounded-2xl w-full shadow-sm";
+                grid.innerHTML = `<div class="text-center p-6 flex flex-col items-center max-w-sm">
+                    <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                    </div>
+                    <p class="font-extrabold text-slate-800 text-lg">No active devices</p>
+                    <p class="text-sm text-slate-500 mt-1.5 mb-5 leading-relaxed">Add your first WhatsApp device session to start automating incoming and outgoing messages.</p>
+                    <button onclick="openAddDeviceModal()" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-colors shadow-md shadow-blue-500/10">Add First Device</button>
+                </div>`;
+                return;
+            }
+            grid.className = "grid grid-cols-1 md:grid-cols-2 gap-6";
+
+            sessions.forEach(session => {
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all duration-200";
+                
+                let statusBadge = '';
+                let actionBtn = '';
+
+                if (session.status === 'CONNECTED') {
+                    statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Connected</span>`;
+                    actionBtn = `<button onclick="logoutDevice('${session.id}')" class="px-3.5 py-2 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors">Disconnect</button>`;
+                } else if (session.status === 'WAITING_QR') {
+                    statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-orange-50 text-orange-700 border border-orange-100 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span> Awaiting QR</span>`;
+                    actionBtn = `<button onclick="openQrModal('${session.id}', '${session.name}')" class="px-3.5 py-2 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors">View QR</button>`;
+                } else if (session.status === 'CONNECTING') {
+                    statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-100 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span> Pairing...</span>`;
+                } else {
+                    statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-50 text-slate-500 border border-slate-100 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Offline</span>`;
+                    actionBtn = `<button onclick="logoutDevice('${session.id}')" class="px-3.5 py-2 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors">Start Session</button>`;
+                }
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h4 class="font-extrabold text-slate-800 text-lg leading-tight tracking-tight">${session.name}</h4>
+                            <p class="text-[11px] text-slate-400 font-mono mt-1.5">ID: ${session.id}</p>
+                            ${session.apiKey ? '<span class="inline-block mt-2 px-2 py-0.5 bg-indigo-50 border border-indigo-100 rounded text-[9px] font-bold text-indigo-600">Custom API Key</span>' : ''}
+                            ${session.webhookUrl ? '<span class="inline-block mt-2 ml-1.5 px-2 py-0.5 bg-emerald-50 border border-emerald-100 rounded text-[9px] font-bold text-emerald-600">Custom Webhook</span>' : ''}
+                        </div>
+                        ${statusBadge}
+                    </div>
+                    <div class="flex justify-between items-center mt-6 pt-4 border-t border-slate-100">
+                        <div class="flex gap-2">
+                            <button onclick="deleteDevice('${session.id}')" class="p-2 hover:bg-red-50 text-red-500 rounded-xl transition-colors" title="Delete Device">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                            <button onclick="openDeviceSettingsModal('${session.id}', '${session.name}')" class="p-2 hover:bg-slate-50 text-slate-500 rounded-xl transition-colors" title="Configure settings">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            </button>
+                        </div>
+                        <div class="flex gap-2">
+                            ${actionBtn}
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+
+            updatePlaygroundDropdown();
+        }
+
+        function updatePlaygroundDropdown() {
+            const select = document.getElementById('playgroundSessionSelect');
+            const prevVal = select.value;
+            select.innerHTML = '';
+            
+            const connected = sessions.filter(s => s.status === 'CONNECTED');
+            if (connected.length === 0) {
+                select.innerHTML = '<option value="">-- No Active Connected Devices Available --</option>';
+                return;
+            }
+
+            connected.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.innerText = `${s.name} (${s.id})`;
+                select.appendChild(opt);
+            });
+
+            if (sessions.find(s => s.id === prevVal && s.status === 'CONNECTED')) {
+                select.value = prevVal;
+            }
+
+            updatePlaygroundApiKeyHint();
+        }
+
+        function updatePlaygroundApiKeyHint() {
+            const sessionId = document.getElementById('playgroundSessionSelect').value;
+            const session = sessions.find(s => s.id === sessionId);
+            // Hint updates based on what security settings are needed
+        }
+
+        /* --- WEBSOCKET CLIENT --- */
+        const socket = io();
+
+        socket.on('initialSessions', (data) => {
+            sessions = data;
+            renderDevices();
+        });
+
+        socket.on('statusUpdate', (data) => {
+            const idx = sessions.findIndex(s => s.id === data.sessionId);
+            if (idx !== -1) {
+                sessions[idx].status = data.status;
+                sessions[idx].qrCode = data.qrCode;
+            } else {
+                sessions.push({
+                    id: data.sessionId,
+                    name: data.sessionName,
+                    status: data.status,
+                    qrCode: data.qrCode,
+                    webhookUrl: data.webhookUrl || null,
+                    apiKey: data.apiKey || null
+                });
+            }
+            renderDevices();
+
+            if (activeQrSessionId === data.sessionId) {
+                renderQrModalContent();
+            }
+        });
+
+        /* --- ACTIONS & API --- */
+        async function fetchSessions() {
+            try {
+                const res = await fetch('/api/sessions');
+                const data = await res.json();
+                if (data.success) {
+                    sessions = data.sessions;
+                    renderDevices();
+                }
+            } catch (e) {
+                showToast('Failed to fetch devices.', 'error');
+            }
+        }
+
+        async function submitAddDevice() {
+            const idInput = document.getElementById('newSessionId');
+            const nameInput = document.getElementById('newSessionName');
+            const sessionId = idInput.value.trim();
+            const sessionName = nameInput.value.trim();
+
+            if (!sessionName) {
+                showToast('Display Name is required.', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/sessions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId, sessionName })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Device node deployed successfully.');
+                    closeAddDeviceModal();
+                    await fetchSessions();
+                    if (data.session.status === 'WAITING_QR') {
+                        openQrModal(data.session.id, data.session.name);
+                    }
+                } else {
+                    showToast(data.error || 'Failed to deploy device node.', 'error');
+                }
+            } catch(e) {
+                showToast('API connection failed.', 'error');
+            }
+        }
+
+        async function logoutDevice(sessionId) {
+            try {
+                const res = await fetch(`/api/logout/${sessionId}`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Device connection sequence rebooted.');
+                    await fetchSessions();
+                }
+            } catch(e) {
+                showToast('Action failed.', 'error');
+            }
+        }
+
+        async function deleteDevice(sessionId) {
+            if (!confirm(`Are you sure you want to permanently delete device '${sessionId}'?`)) return;
+            try {
+                const res = await fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Device session deleted.');
+                    await fetchSessions();
+                }
+            } catch(e) {
+                showToast('Deletion failed.', 'error');
             }
         }
 
@@ -368,7 +721,6 @@
             }
         }
 
-        /* --- ACTIONS --- */
         function copyApiKey() {
             const input = document.getElementById('apiKeyInput');
             input.select();
@@ -377,7 +729,7 @@
         }
 
         async function generateKey() {
-            if(!confirm('DANGER! Hard resetting your API key will instantly drop all active integrations causing 401 Unauthorized errors. Proceed?')) return;
+            if(!confirm('DANGER! Hard resetting your API key will instantly drop all active integrations. Proceed?')) return;
             try {
                 const res = await fetch('/api/generate-key', { method: 'POST' });
                 const data = await res.json();
@@ -400,19 +752,10 @@
                     body: JSON.stringify({ url: input.value })
                 });
                 const data = await res.json();
-                if (data.success) showToast('Inbound Webhook listener successfully patched.');
+                if (data.success) showToast('Webhook configurations successfully patched.');
                 else showToast('Webhook config rejection.', 'error');
             } catch(e) { showToast('Fatal error patching webhook.', 'error'); }
             btn.innerHTML = temp;
-        }
-
-        async function resetWA() {
-            if (!confirm('Are you replacing your phone/device? This will format the active session!')) return;
-            try {
-                await fetch('/api/logout', { method: 'POST' });
-                showToast('Engine formatted. Reboot sequence initiated.');
-                fetchStatus();
-            } catch (e) { showToast('Format sequence failed.', 'error'); }
         }
 
         async function logoutSystem() {
@@ -423,12 +766,22 @@
         /* --- API TESTER SYSTEM --- */
         async function runApiTest(endpoint, body, outputNodeId) {
             const output = document.getElementById(outputNodeId);
-            const apiKey = document.getElementById('apiKeyInput').value;
+            const sessionId = document.getElementById('playgroundSessionSelect').value;
+            const session = sessions.find(s => s.id === sessionId);
+
+            if (!sessionId) {
+                showToast('Please select a connected device/session first.', 'error');
+                output.innerText = 'No session selected.';
+                return;
+            }
+
+            // Decide which API Key to use: device-specific or global fallback
+            const apiKey = (session && session.apiKey) ? session.apiKey : document.getElementById('apiKeyInput').value;
             
             output.innerText = 'Transmitting packet over TCP...';
             
             try {
-                const res = await fetch('/api/v1/' + endpoint, {
+                const res = await fetch(`/api/v1/${sessionId}/${endpoint}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -440,7 +793,7 @@
                 const jsonColor = data.success ? 'text-green-400' : 'text-red-400';
                 output.innerHTML = `<span class="${jsonColor}">${JSON.stringify(data, null, 2)}</span>`;
                 
-                if(data.success) showToast(data.result?.status === 'queued' ? 'Payload queued globally via Limiter.' : 'Payload delivered successfully!');
+                if(data.success) showToast('Payload queued successfully!');
                 else showToast(`Packet bounced: ${data.error || 'Unknown Error'}`, 'error');
             } catch (e) {
                 output.innerText = 'Network Collapse: ' + e.message;
@@ -473,7 +826,7 @@
         }
 
         /* --- INITIALIZE --- */
-        fetchStatus();
+        fetchSessions();
         fetchCredentials();
     </script>
 </body>

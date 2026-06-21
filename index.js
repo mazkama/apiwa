@@ -1,5 +1,4 @@
 require('dotenv').config();
-const waManager = require('./src/wa');
 const { startServer } = require('./src/server');
 
 // Error Handling Global
@@ -15,9 +14,6 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled Rejection (Promise) di:', promise, 'alasan:', reason);
 });
-
-// Mulai koneksi WhatsApp
-waManager.connect();
 
 // Start API Server
 startServer(process.env.PORT || 3000);

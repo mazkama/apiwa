@@ -9,12 +9,13 @@ const db = require('./db');
 const { updateLidMapping, normalizeJid, getUserId, isLid, loadLidMappingsFromDB } = require('./jid-utils');
 
 class WAManager extends EventEmitter {
-    constructor() {
+    constructor(sessionId, sessionName) {
         super();
+        this.sessionId = sessionId;
+        this.sessionName = sessionName || sessionId;
         this.sock = null;
         this.qrCode = null;
         this.setStatus('DISCONNECTED'); // DISCONNECTED, CONNECTING, WAITING_QR, CONNECTED
-        this.qrCode = null;
         
         // Inisialisasi Queue Limiter dengan Jeda Protektif 3 Detik (3000 ms)
         this.messageQueue = new QueueManager(async (task) => {
@@ -25,7 +26,12 @@ class WAManager extends EventEmitter {
 
     setStatus(newStatus) {
         this.status = newStatus;
-        this.emit('statusUpdate', this.status);
+        this.emit('statusUpdate', {
+            sessionId: this.sessionId,
+            sessionName: this.sessionName,
+            status: this.status,
+            qrCode: this.qrCode
+        });
     }
 
     async connect() {
@@ -34,16 +40,16 @@ class WAManager extends EventEmitter {
         // Memuat seluruh mapping LID dari SQLite sebelum socket terhubung
         await loadLidMappingsFromDB();
 
-        const authPath = path.join(__dirname, '../auth_info_baileys');
+        const authPath = path.join(__dirname, `../auth_info_baileys_${this.sessionId}`);
         const { state, saveCreds } = await useMultiFileAuthState(authPath);
         const { version, isLatest } = await fetchLatestBaileysVersion();
         
-        console.log(`Using WA v${version.join('.')}, isLatest: ${isLatest}`);
+        console.log(`[${this.sessionId}] Using WA v${version.join('.')}, isLatest: ${isLatest}`);
 
         this.sock = makeWASocket({ 
             version,
             auth: state, 
-            printQRInTerminal: true,
+            printQRInTerminal: false,
             browser: ['Mac OS', 'Chrome', '10.15.7']
         });
 
@@ -54,29 +60,32 @@ class WAManager extends EventEmitter {
             if (qr) {
                 this.qrCode = qr;
                 this.setStatus('WAITING_QR');
-            } else {
-                // Jangan hapus qrCode di sini, agar tetap tampil jika belum discan
             }
 
             if (connection === 'close') {
                 const statusCode = (lastDisconnect.error instanceof Boom)?.output?.statusCode;
+                // If it is destroyed (socket nullified), stop reconnection attempts immediately
+                if (!this.sock) {
+                    console.log(`[${this.sessionId}] Connection closed because device was deleted.`);
+                    return;
+                }
                 const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
                 
-                console.log('Connection closed due to', lastDisconnect.error, ', reconnecting', shouldReconnect);
+                console.log(`[${this.sessionId}] Connection closed due to`, lastDisconnect.error, ', reconnecting', shouldReconnect);
                 
                 if (statusCode === 401 || statusCode === 403 || statusCode === 405) {
-                    console.log('Session invalid, removing auth info and restarting...');
-                    this.logout(); // Call logout without authPath, it handles it internally
+                    console.log(`[${this.sessionId}] Session invalid, removing auth info and restarting...`);
+                    this.logout();
                 } else if (shouldReconnect) {
                     setTimeout(() => {
-                        console.log('Mencoba menyambungkan kembali...');
+                        console.log(`[${this.sessionId}] Mencoba menyambungkan kembali...`);
                         this.connect();
                     }, 5000);
                 } else {
                     // Jika dilogout (misal lewat HP atau perintah API)
                     this.qrCode = null;
                     this.setStatus('DISCONNECTED');
-                    const authPath = path.join(__dirname, '../auth_info_baileys');
+                    const authPath = path.join(__dirname, `../auth_info_baileys_${this.sessionId}`);
                     
                     setTimeout(() => {
                         try {
@@ -84,13 +93,13 @@ class WAManager extends EventEmitter {
                                 fs.rmSync(authPath, { recursive: true, force: true });
                             }
                         } catch (e) {
-                            console.error('Gagal menghapus cache kredensial (Mungkin File masih di-Lock Windows):', e.message);
+                            console.error(`[${this.sessionId}] Gagal menghapus cache kredensial:`, e.message);
                         }
-                        this.connect(); // Memaksa agar membuat sesi QR baru jika Logout penuh dengan aman
-                    }, 2500); // 2.5 Detik jeda agar Baileys melepas seluruh lock LevelDB
+                        this.connect();
+                    }, 2500);
                 }
             } else if (connection === 'open') {
-                console.log('Opened connection');
+                console.log(`[${this.sessionId}] Opened connection`);
                 this.qrCode = null;
                 this.setStatus('CONNECTED');
             }
@@ -98,8 +107,6 @@ class WAManager extends EventEmitter {
 
         this.sock.ev.on('creds.update', saveCreds);
 
-        // LID mapping: contacts.update carries {id (phone JID), lid} pairs during contact sync.
-        // This populates the in-memory LID→JID store used by normalizeJid().
         this.sock.ev.on('contacts.update', (updates) => {
             const mappings = [];
             for (const c of updates) {
@@ -108,7 +115,6 @@ class WAManager extends EventEmitter {
             if (mappings.length > 0) updateLidMapping(mappings);
         });
 
-        // contacts.upsert carries initial contacts sync which has LID information
         this.sock.ev.on('contacts.upsert', (contacts) => {
             const mappings = [];
             for (const c of contacts) {
@@ -117,19 +123,16 @@ class WAManager extends EventEmitter {
             if (mappings.length > 0) updateLidMapping(mappings);
         });
 
-        // contacts.set carries the initial bulk contacts sync
         this.sock.ev.on('contacts.set', ({ contacts }) => {
             const mappings = [];
             for (const c of contacts) {
                 if (c.id && c.lid) mappings.push({ jid: c.id, lid: c.lid });
             }
             if (mappings.length > 0) {
-                console.log(`[LID] Menyinkronkan ${mappings.length} kontak dari contacts.set`);
                 updateLidMapping(mappings);
             }
         });
 
-        // messaging-history.set carries initial history sync which contains contacts
         this.sock.ev.on('messaging-history.set', ({ contacts }) => {
             if (contacts) {
                 const mappings = [];
@@ -137,33 +140,25 @@ class WAManager extends EventEmitter {
                     if (c.id && c.lid) mappings.push({ jid: c.id, lid: c.lid });
                 }
                 if (mappings.length > 0) {
-                    console.log(`[LID] Menyinkronkan ${mappings.length} kontak dari messaging-history.set`);
                     updateLidMapping(mappings);
                 }
             }
         });
 
-        // lid-mapping.update is a dedicated Baileys event for LID resolution
-        // (available in newer Baileys versions; safe no-op if not emitted)
         this.sock.ev.on('lid-mapping.update', (mappings) => {
             updateLidMapping(mappings);
         });
 
-
-        // Listener untuk Pesan Masuk (Webhook Inbound)
         this.sock.ev.on('messages.upsert', async (m) => {
             const msg = m.messages[0];
-            // Abaikan pesan internal / dari diri sendiri
             if (!msg.message || msg.key.fromMe) return;
 
             try {
-                // Full Enterprise Webhook Extraction
                 let messageType = Object.keys(msg.message)[0];
                 if (messageType === 'senderKeyDistributionMessage') {
-                    messageType = Object.keys(msg.message)[1] || messageType; // Bypass signal distribution keys
+                    messageType = Object.keys(msg.message)[1] || messageType;
                 }
                 
-                // Cerdas mengekstrak teks asli atau caption dari media
                 let messageText = '';
                 if (msg.message.conversation) messageText = msg.message.conversation;
                 else if (msg.message.extendedTextMessage?.text) messageText = msg.message.extendedTextMessage.text;
@@ -173,65 +168,59 @@ class WAManager extends EventEmitter {
                 let messageTitle = msg.message.documentMessage?.title || msg.message.documentMessage?.fileName || '';
 
                 const isGroup = msg.key.remoteJid.endsWith('@g.us');
-
-                // Normalize the conversation JID for the 'from' field:
-                //   DM messages  → resolves to sender's phone number (or LID fallback)
-                //   Group messages → returns the group JID unchanged (groups are not LID-affected)
                 const normalizedRemoteJid = normalizeJid(msg.key.remoteJid);
                 const sender = normalizedRemoteJid.split('@')[0];
 
-                // Get the actual message sender (handles LID resolution and remoteJidAlt fallback):
-                //   DM messages    → same as sender above
-                //   Group messages → resolves msg.key.participant (may be a LID)
                 const senderInfo = getUserId(msg);
                 const participant = senderInfo.id;
                 const isLidBased = senderInfo.isLidBased;
                 const phone = isLidBased ? null : senderInfo.id;
                 const pushName = msg.pushName || 'Unknown Contact';
 
-                db.getWebhookUrl().then(webhookUrl => {
-                    if (webhookUrl) {
-                        const payload = {
-                            event: 'message.received',
-                            data: {
-                                id: msg.key.id,
-                                from: sender,
-                                participant: participant,
-                                phone: phone,
-                                pushName: pushName,
-                                isGroup: isGroup,
-                                isLidBased: isLidBased,
-                                type: messageType.replace('Message', ''),
-                                text: messageText || messageTitle,
-                                timestamp: msg.messageTimestamp,
-                                device: msg.key.id.length > 21 ? 'Android' : 'iOS/Web',
-                                // Sertakan metadata murni bagi Developer tingkat lanjut (mengunduh PDF/Gambar)
-                                rawContext: msg.message
-                            }
-                        };
+                // Decide webhook URL to use: device-specific or global fallback
+                const targetWebhook = this.webhookUrl || await db.getWebhookUrl();
 
+                if (targetWebhook) {
+                    const payload = {
+                        event: 'message.received',
+                        sessionId: this.sessionId,
+                        sessionName: this.sessionName,
+                        data: {
+                            id: msg.key.id,
+                            from: sender,
+                            participant: participant,
+                            phone: phone,
+                            pushName: pushName,
+                            isGroup: isGroup,
+                            isLidBased: isLidBased,
+                            type: messageType.replace('Message', ''),
+                            text: messageText || messageTitle,
+                            timestamp: msg.messageTimestamp,
+                            device: msg.key.id.length > 21 ? 'Android' : 'iOS/Web',
+                            rawContext: msg.message
+                        }
+                    };
 
-                        fetch(webhookUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        }).catch(e => console.error('Webhook payload bounced:', e.message));
-                    }
-                }).catch(e => console.error('Failed retrieving webhook URL:', e));
+                    fetch(targetWebhook, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    }).catch(e => console.error(`[${this.sessionId}] Webhook payload bounced:`, e.message));
+                }
             } catch (err) {
-                console.error("Error pada Event Listener Webhook API:", err);
+                console.error(`[${this.sessionId}] Error pada Event Listener Webhook API:`, err);
             }
         });
     }
 
     logout() {
         this.setStatus('DISCONNECTED');
-        const authPath = path.join(__dirname, '../auth_info_baileys');
+        const authPath = path.join(__dirname, `../auth_info_baileys_${this.sessionId}`);
         if (fs.existsSync(authPath)) {
             try {
                 fs.rmSync(authPath, { recursive: true, force: true });
             } catch (e) {
-                console.error('Logout: Gagal menghapus folder sesi:', e.message);
+                console.error(`[${this.sessionId}] Logout: Gagal menghapus folder sesi:`, e.message);
             }
         }
         this.qrCode = null;
@@ -239,23 +228,45 @@ class WAManager extends EventEmitter {
             this.connect();
         }, 2500);
     }
+
+    destroy() {
+        this.setStatus('DISCONNECTED');
+        const socketRef = this.sock;
+        this.sock = null; // nullify early to prevent reconnection loops
+        try {
+            if (socketRef) {
+                socketRef.ev.removeAllListeners();
+                if (socketRef.ws) {
+                    socketRef.ws.close();
+                }
+                socketRef.end(undefined);
+            }
+        } catch (e) {
+            console.error(`[${this.sessionId}] Error destroying socket:`, e.message);
+        }
+        
+        const authPath = path.join(__dirname, `../auth_info_baileys_${this.sessionId}`);
+        if (fs.existsSync(authPath)) {
+            try {
+                // Give Baileys a small delay to finish any pending IO before we forcefully delete the folder
+                setTimeout(() => {
+                    if (fs.existsSync(authPath)) {
+                        fs.rmSync(authPath, { recursive: true, force: true });
+                    }
+                }, 1000);
+            } catch (e) {
+                console.error(`[${this.sessionId}] Gagal menghapus folder auth saat destroy:`, e.message);
+            }
+        }
+    }
     
-    /**
-     * Format number or LID to WhatsApp JID format
-     * Supports auto-detection based on numeric patterns
-     */
     formatRecipient(id, type = null) {
         if (typeof id !== 'string') id = id.toString();
-        
-        // If already a JID, return as is
         if (id.endsWith('@s.whatsapp.net') || id.endsWith('@lid') || id.endsWith('@g.us')) {
             return id;
         }
 
-        // Clean identifier (only alphanumeric for LID/Phone)
         let identifier = id.replace(/[^0-9a-zA-Z]/g, '');
-
-        // AUTO DETECTION: LIDs are usually 14-digit numeric identifiers starting with '7'
         const isLikelyLid = (identifier.length >= 14 && identifier.startsWith('7'));
         
         if (type === 'lid' || isLid(id) || (type !== 'number' && isLikelyLid)) {
@@ -263,7 +274,6 @@ class WAManager extends EventEmitter {
             return identifier;
         }
 
-        // Default to standard phone number processing
         let number = id.replace(/[^0-9]/g, '');
         if (number.startsWith('0')) {
             number = '62' + number.slice(1);
@@ -274,7 +284,6 @@ class WAManager extends EventEmitter {
         return number;
     }
 
-    // Helper untuk mengubah string input menjadi Base64 Buffer atau URL biasa
     getMediaContent(input) {
         if (typeof input === 'string' && input.startsWith('data:')) {
             const base64Data = input.split('base64,')[1];
@@ -286,11 +295,8 @@ class WAManager extends EventEmitter {
     async sendText(to, text, type = null) {
         if (!this.sock || this.status !== 'CONNECTED') throw new Error('WhatsApp is not connected');
         const number = this.formatRecipient(to, type);
-        
-        // API tidak ditahan (Fire-And-Forget), biar diproses background
         this.messageQueue.add({ number, payload: { text: text } })
-            .catch(err => console.error('Failed to send queued text:', err.message));
-            
+            .catch(err => console.error(`[${this.sessionId}] Failed to send queued text:`, err.message));
         return { status: 'queued', number: number, detail: 'Message added to rate-limiter queue' };
     }
 
@@ -298,10 +304,8 @@ class WAManager extends EventEmitter {
         if (!this.sock || this.status !== 'CONNECTED') throw new Error('WhatsApp is not connected');
         const number = this.formatRecipient(to, type);
         const mediaConfig = this.getMediaContent(imageUrl);
-        
         this.messageQueue.add({ number, payload: { image: mediaConfig, caption: caption } })
-            .catch(err => console.error('Failed to send queued image:', err.message));
-            
+            .catch(err => console.error(`[${this.sessionId}] Failed to send queued image:`, err.message));
         return { status: 'queued', number: number, detail: 'Image added to rate-limiter queue' };
     }
 
@@ -309,13 +313,10 @@ class WAManager extends EventEmitter {
         if (!this.sock || this.status !== 'CONNECTED') throw new Error('WhatsApp is not connected');
         const number = this.formatRecipient(to, type);
         const mediaConfig = this.getMediaContent(documentUrl);
-        
         this.messageQueue.add({ number, payload: { document: mediaConfig, mimetype: mimetype, fileName: fileName } })
-            .catch(err => console.error('Failed to send queued document:', err.message));
-            
+            .catch(err => console.error(`[${this.sessionId}] Failed to send queued document:`, err.message));
         return { status: 'queued', number: number, detail: 'Document added to rate-limiter queue' };
     }
 }
 
-const waManager = new WAManager();
-module.exports = waManager;
+module.exports = WAManager;
