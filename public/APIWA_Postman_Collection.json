@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "APIWA Gateway",
-    "description": "WhatsApp Gateway API Collection for integrating Baileys with external Node/PHP/Python systems.",
+    "name": "APIWA Gateway (Multi-Tenant)",
+    "description": "Professional WhatsApp Gateway API Collection with Per-Session Routing and Bearer Token Auth.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -15,6 +15,34 @@
     ]
   },
   "item": [
+    {
+      "name": "0. Check Number on WhatsApp",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"number\": \"08123456789\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/{{session_id}}/check-number",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "{{session_id}}",
+            "check-number"
+          ]
+        }
+      }
+    },
     {
       "name": "1. Send Text Message",
       "request": {
@@ -30,13 +58,14 @@
           "raw": "{\n  \"number\": \"08123456789\",\n  \"message\": \"Halo! Ini notifikasi teks dari APIWA Gateway.\"\n}"
         },
         "url": {
-          "raw": "{{base_url}}/api/v1/send-message",
+          "raw": "{{base_url}}/api/v1/{{session_id}}/send-message",
           "host": [
             "{{base_url}}"
           ],
           "path": [
             "api",
             "v1",
+            "{{session_id}}",
             "send-message"
           ]
         }
@@ -57,47 +86,21 @@
           "raw": "{\n  \"number\": \"628123456789\",\n  \"image_url\": \"https://images.unsplash.com/photo-1541963463532-d68292c34b19\",\n  \"caption\": \"Caption gambar indah APIWA Gateway\"\n}"
         },
         "url": {
-          "raw": "{{base_url}}/api/v1/send-image",
+          "raw": "{{base_url}}/api/v1/{{session_id}}/send-image",
           "host": [
             "{{base_url}}"
           ],
           "path": [
             "api",
             "v1",
+            "{{session_id}}",
             "send-image"
           ]
         }
       }
     },
     {
-      "name": "3. Send Image (Base64)",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"number\": \"628123456789\",\n  \"image_url\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==\",\n  \"caption\": \"Satu titik Red Pixel rahasia dikirim via Base64\"\n}"
-        },
-        "url": {
-          "raw": "{{base_url}}/api/v1/send-image",
-          "host": [
-            "{{base_url}}"
-          ],
-          "path": [
-            "api",
-            "v1",
-            "send-image"
-          ]
-        }
-      }
-    },
-    {
-      "name": "4. Send Document (PDF/Docx)",
+      "name": "3. Send Document (PDF/Docx)",
       "request": {
         "method": "POST",
         "header": [
@@ -111,48 +114,90 @@
           "raw": "{\n  \"number\": \"628123456789\",\n  \"document_url\": \"https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf\",\n  \"filename\": \"Kwitansi-Dummy.pdf\",\n  \"mimetype\": \"application/pdf\"\n}"
         },
         "url": {
-          "raw": "{{base_url}}/api/v1/send-document",
+          "raw": "{{base_url}}/api/v1/{{session_id}}/send-document",
           "host": [
             "{{base_url}}"
           ],
           "path": [
             "api",
             "v1",
+            "{{session_id}}",
             "send-document"
           ]
         }
       }
-    }
-  ],
-  "event": [
+    },
     {
-      "listen": "prerequest",
-      "script": {
-        "type": "text/javascript",
-        "exec": [
-          ""
-        ]
+      "name": "4. Send Voice Note (PTT)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"number\": \"628123456789\",\n  \"audio_url\": \"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3\",\n  \"ptt\": true\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/{{session_id}}/send-voice",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "{{session_id}}",
+            "send-voice"
+          ]
+        }
       }
     },
     {
-      "listen": "test",
-      "script": {
-        "type": "text/javascript",
-        "exec": [
-          ""
-        ]
+      "name": "5. Send Video (MP4)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"number\": \"628123456789\",\n  \"video_url\": \"https://www.w3schools.com/html/mov_bbb.mp4\",\n  \"caption\": \"Video promosi APIWA\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/{{session_id}}/send-video",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "{{session_id}}",
+            "send-video"
+          ]
+        }
       }
     }
   ],
   "variable": [
     {
       "key": "base_url",
-      "value": "http://localhost:3000",
+      "value": "https://apiwa.kuloalan.online",
+      "type": "string"
+    },
+    {
+      "key": "session_id",
+      "value": "wa-session",
       "type": "string"
     },
     {
       "key": "api_key",
-      "value": "MASUKAN_API_KEY_ANDA_DISINI",
+      "value": "YOUR_SESSION_API_KEY",
       "type": "string"
     }
   ]

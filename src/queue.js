@@ -7,12 +7,12 @@ class QueueManager {
     constructor(processCallback, delayMs = 3000) {
         this.queue = [];
         this.isProcessing = false;
-        this.processCallback = processCallback; // Fungsi aktual yang akan dieksekusi (e.g. sock.sendMessage)
+        this.processCallback = processCallback;
         this.delayMs = delayMs;
     }
 
     /**
-     * Menambahkan Job baru ke ekor (tail) antrean.
+     * Menambahkan Job baru ke antrean.
      */
     add(task) {
         return new Promise((resolve, reject) => {
@@ -24,8 +24,7 @@ class QueueManager {
     }
 
     /**
-     * Memproses Job terdepan. Setelah selesai, dijeda delayMs milidetik
-     * sebelum lanjut ke Job selanjutnya di rantai antrean.
+     * Memproses Job terdepan. Setelah selesai, dijeda delayMs milidetik.
      */
     async process() {
         if (this.queue.length === 0) {

@@ -23,15 +23,23 @@ A self-hosted, scalable, and professional WhatsApp API Gateway built on top of *
 - **Inbound Webhook Config**: Seamlessly configure external Webhook URL endpoints for incoming messages via the graphical UI.
 
 ### 4. 🚀 Outbound REST API (Message Broadcasting)
-*All `/api/v1/...` endpoints are protected by standard `x-api-key` or `Authorization: Bearer` HTTP Headers.*
-- **URL Structure**: Requests now explicitly target a `sessionId` in the URL path (e.g., `POST /api/v1/:sessionId/send-message`).
-- **Dual-Identifier Formatting Engine**: Automatically handles both standard Phone Numbers and WhatsApp LIDs (Linked IDs).
-- **Send Text, Image, & Document**: Fully supports raw media uploads via Base64 or direct URL streaming.
+*All `/api/v1/...` endpoints are protected by standard `x-api-key` or `Authorization: Bearer <token>` headers (Session API Key or Master API Key).*
+- **URL Structure**: `POST /api/v1/:sessionId/<endpoint>`
+- **Endpoints**:
+  - `check-number`: Validasi nomor terdaftar di WhatsApp
+  - `send-message`: Kirim teks pesan
+  - `send-image`: Kirim gambar (URL/Base64)
+  - `send-document`: Kirim berkas (PDF, DOCX, ZIP)
+  - `send-voice`: Kirim pesan suara (PTT audio)
+  - `send-video`: Kirim video
+  - `read-messages`: Tandai pesan telah dibaca
+  - `resolve-newsletter`: Resolusi invite link/code saluran WA ke JID
 
-### 5. 🪝 Advanced Inbound Webhook API (Real-Time Callback)
-- **Instant HTTP POST Transfer**: Whenever a message is received on any connected node, the Node.js engine instantly fires it to your specified Webhook URL.
-- **Session Tracking**: Webhook payloads are now enriched with `"sessionId"` and `"sessionName"` properties, making it effortless to identify which specific WhatsApp node received the incoming message.
-- **Deep Meta Inspection**: Features Native Message Type detection, LID identification, standard phone number extraction (`phone`), and a complete delivery of `rawContext`.
+### 5. 🪝 Inbound Webhook & Mobile Audit Logs
+- **Instant Dispatch**: Webhook per-sesi dengan verifikasi secret token.
+- **Audit Log Table**: Riwayat pesan Outbox & Webhook Delivery lengkap.
+- **Responsive UI**: Tampilan adaptif desktop table & mobile card view.
+
 
 ### 6. ⏳ Smart Delay Queue (Anti-Banned Rate Limiter)
 - **Isolated Rate Limiting**: Each Session Node operates its own independent `QueueManager`.
